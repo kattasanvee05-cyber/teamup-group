@@ -10,32 +10,48 @@ export async function signup(req, res) {
     .from('profiles').select('id').eq('username', username).single();
   if (existing) return res.status(409).json({ error: 'Username already taken' });
 
-  // Use anon client signUp — Supabase sends a confirmation email; no magic link login
-  const { data, error } = await supabase.auth.signUp({
+  // Use admin createUser with email_confirm: true — no confirmation email needed
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
-    options: { data: { full_name: fullName, username, role } },
+    email_confirm: true,
+    user_metadata: { full_name: fullName, username, role },
   });
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    if (error.message?.toLowerCase().includes('already registered') || error.message?.toLowerCase().includes('already exists')) {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+    return res.status(400).json({ error: error.message });
+  }
   if (!data.user) return res.status(400).json({ error: 'Signup failed' });
 
-  // signUp returns a user with empty identities array if the email is already registered
-  if (!data.user.identities || data.user.identities.length === 0) {
-    return res.status(409).json({ error: 'Email already registered' });
-  }
+  // Check if a DB trigger already created the profile row
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles').select('id').eq('id', data.user.id).maybeSingle();
 
-  // Create profile row via admin client (user exists but email not yet confirmed)
-  const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-    id:        data.user.id,
-    auth_id:   data.user.id,
-    email,
-    username,
-    full_name: fullName,
-    role,
-  });
-  if (profileError) {
-    await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-    return res.status(500).json({ error: 'Failed to create profile' });
+  if (existingProfile) {
+    // Trigger created it — just update with our values
+    const { error: updateErr } = await supabaseAdmin
+      .from('profiles')
+      .update({ email, username, full_name: fullName, role: role ?? 'student' })
+      .eq('id', data.user.id);
+    if (updateErr) console.error('[signup] profile update error:', updateErr.message);
+  } else {
+    // No trigger — insert fresh row
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+      id:        data.user.id,
+      email,
+      username,
+      full_name: fullName,
+      role:      role ?? 'student',
+    });
+    if (profileError) {
+      console.error('[signup] profile insert error:', JSON.stringify(profileError));
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+      return res.status(500).json({
+        error: `Profile setup failed: ${profileError.message} | code: ${profileError.code} | ${profileError.hint ?? ''}`,
+      });
+    }
   }
 
   res.status(201).json({ message: 'Account created! Please check your email and click the confirmation link before logging in.' });
@@ -45,12 +61,7 @@ export async function signup(req, res) {
 export async function login(req, res) {
   const { email, password } = req.body;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    if (error.message?.toLowerCase().includes('email not confirmed')) {
-      return res.status(401).json({ error: 'Please confirm your email address. Check your inbox for the confirmation link.' });
-    }
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
+  if (error) return res.status(401).json({ error: 'Invalid email or password' });
 
   const { data: profile } = await supabaseAdmin
     .from('profiles').select('*').eq('id', data.user.id).single();
@@ -122,6 +133,7 @@ export async function updateMe(req, res) {
   if (b.githubUrl    !== undefined) updates.github_url    = b.githubUrl;
   if (b.skills       !== undefined) updates.skills        = b.skills;
   if (b.interests    !== undefined) updates.interests     = b.interests;
+  if (b.avatarUrl    !== undefined) updates.avatar_url    = b.avatarUrl;
 
   const { data, error } = await supabaseAdmin
     .from('profiles')

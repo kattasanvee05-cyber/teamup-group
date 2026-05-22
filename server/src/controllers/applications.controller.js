@@ -26,6 +26,41 @@ async function enrichApplications(apps) {
   });
 }
 
+// POST /api/applications
+export async function createApplication(req, res) {
+  const { opportunityId, internshipId, projectId, coverLetter, resumeUrl } = req.body;
+
+  if (!opportunityId && !internshipId && !projectId) {
+    return res.status(400).json({ error: 'One of opportunityId, internshipId, or projectId is required' });
+  }
+
+  // Prevent duplicate applications
+  let dupQuery = supabaseAdmin.from('applications').select('id').eq('user_id', req.profile.id);
+  if (opportunityId) dupQuery = dupQuery.eq('opportunity_id', opportunityId);
+  else if (internshipId) dupQuery = dupQuery.eq('internship_id', internshipId);
+  else if (projectId) dupQuery = dupQuery.eq('project_id', projectId);
+
+  const { data: existing } = await dupQuery.maybeSingle();
+  if (existing) return res.status(409).json({ error: 'You have already applied for this' });
+
+  const { data, error } = await supabaseAdmin
+    .from('applications')
+    .insert({
+      user_id:       req.profile.id,
+      opportunity_id: opportunityId ?? null,
+      internship_id:  internshipId  ?? null,
+      project_id:     projectId     ?? null,
+      cover_letter:   coverLetter?.trim() || null,
+      resume_url:     resumeUrl     ?? null,
+      status:         'pending',
+    })
+    .select(APP_SELECT)
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ application: data });
+}
+
 // GET /api/applications
 export async function listMyApplications(req, res) {
   const { type, status, sort = 'newest', page = 1, limit = 20 } = req.query;
@@ -110,13 +145,13 @@ export async function withdrawApplication(req, res) {
 
   if (!app) return res.status(404).json({ error: 'Application not found' });
   if (app.user_id !== req.profile.id) return res.status(403).json({ error: 'Not authorized' });
-  if (!['pending', 'reviewing'].includes(app.status)) {
+  if (['accepted', 'rejected'].includes(app.status)) {
     return res.status(409).json({ error: 'Cannot withdraw a decided application' });
   }
 
   const { error } = await supabaseAdmin
     .from('applications')
-    .update({ status: 'withdrawn', updated_at: new Date().toISOString() })
+    .delete()
     .eq('id', req.params.id);
 
   if (error) return res.status(400).json({ error: error.message });

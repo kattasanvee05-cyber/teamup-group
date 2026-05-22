@@ -17,9 +17,9 @@ const router = Router();
 
 router.get   ('/',           authenticate,               listInternships);
 router.get   ('/:id',       authenticate,               getInternship);
-router.post  ('/',          authenticate, teacherUp,    validate(createInternshipSchema), createInternship);
-router.patch ('/:id',       authenticate, teacherUp,    validate(updateInternshipSchema), updateInternship);
-router.delete('/:id',       authenticate, adminOnly,    deleteInternship);
+router.post  ('/',          authenticate,               validate(createInternshipSchema), createInternship);
+router.patch ('/:id',       authenticate,               validate(updateInternshipSchema), updateInternship);
+router.delete('/:id',       authenticate,               deleteInternship);
 router.post  ('/:id/apply', authenticate,               applyToInternship);
 router.post  ('/:id/bookmark', authenticate,            toggleBookmark);
 

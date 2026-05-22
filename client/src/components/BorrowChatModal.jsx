@@ -5,37 +5,25 @@ import { uploadsApi } from '../api/uploads.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import toast from 'react-hot-toast'
 import Spinner from './Spinner.jsx'
-import { FiX, FiSend, FiImage, FiBook, FiTool } from 'react-icons/fi'
+import { FiX, FiSend, FiImage, FiBook, FiTool, FiArrowLeft, FiMessageSquare } from 'react-icons/fi'
 
-export default function BorrowChatModal({ item, itemType, onClose }) {
-  const { profile }   = useAuth()
-  const [chat, setChat]         = useState(null)
-  const [chatError, setChatError] = useState(null)
+function ChatThread({ chatId, otherName, onBack, itemType }) {
+  const { profile } = useAuth()
   const [messages, setMessages] = useState([])
   const [input, setInput]       = useState('')
   const [sending, setSending]   = useState(false)
-  const [starting, setStarting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const lastTs    = useRef(null)
   const bottomRef = useRef(null)
   const pollRef   = useRef(null)
   const fileRef   = useRef(null)
 
-  useEffect(() => {
-    setStarting(true)
-    studiesApi.startChat({ item_id: item.id, item_type: itemType })
-      .then(d => setChat(d.chat))
-      .catch(e => setChatError(e.message ?? 'Could not start chat'))
-      .finally(() => setStarting(false))
-  }, [item.id, itemType])
-
   const fetchMessages = useCallback(async () => {
-    if (!chat) return
     try {
-      const d = await studiesApi.chatMessages(chat.id, lastTs.current)
+      const d = await studiesApi.chatMessages(chatId, lastTs.current)
       if (d.messages?.length) {
         setMessages(prev => {
-          const ids   = new Set(prev.map(m => m.id))
+          const ids = new Set(prev.map(m => m.id))
           const fresh = d.messages.filter(m => !ids.has(m.id))
           if (!fresh.length) return prev
           lastTs.current = fresh[fresh.length - 1].created_at
@@ -43,11 +31,10 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
         })
       }
     } catch {}
-  }, [chat])
+  }, [chatId])
 
   useEffect(() => {
-    if (!chat) return
-    studiesApi.chatMessages(chat.id)
+    studiesApi.chatMessages(chatId)
       .then(d => {
         setMessages(d.messages ?? [])
         if (d.messages?.length) lastTs.current = d.messages[d.messages.length - 1].created_at
@@ -55,7 +42,7 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
       .catch(() => {})
     pollRef.current = setInterval(fetchMessages, 3000)
     return () => clearInterval(pollRef.current)
-  }, [chat, fetchMessages])
+  }, [chatId, fetchMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -63,12 +50,12 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
 
   async function handleSend(e) {
     e.preventDefault()
-    if (!input.trim() || !chat) return
+    if (!input.trim()) return
     setSending(true)
     const text = input.trim()
     setInput('')
     try {
-      const d = await studiesApi.sendMessage(chat.id, text)
+      const d = await studiesApi.sendMessage(chatId, text)
       setMessages(prev => [...prev, d.message])
       lastTs.current = d.message.created_at
     } catch {}
@@ -77,12 +64,12 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
 
   async function handleImagePick(e) {
     const file = e.target.files[0]
-    if (!file || !chat) return
+    if (!file) return
     if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5 MB'); return }
     setUploading(true)
     try {
       const { url } = await uploadsApi.itemImage(file)
-      const d = await studiesApi.sendMessage(chat.id, `[img]${url}`)
+      const d = await studiesApi.sendMessage(chatId, `[img]${url}`)
       setMessages(prev => [...prev, d.message])
       lastTs.current = d.message.created_at
     } catch (err) {
@@ -93,10 +80,108 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
     }
   }
 
+  return (
+    <>
+      {/* Sub-header */}
+      <div className="flex items-center gap-2 border-b border-white/[0.1] px-4 py-2.5">
+        {onBack && (
+          <button onClick={onBack} className="rounded-lg p-1.5 text-white/40 hover:text-white">
+            <FiArrowLeft size={15} />
+          </button>
+        )}
+        <p className="text-xs font-semibold text-white/70">{otherName}</p>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <FiMessageSquare size={28} className="text-white/20" />
+            <p className="text-sm text-white/50">No messages yet. Start the conversation!</p>
+          </div>
+        )}
+        {messages.map(msg => {
+          const mine  = msg.sender?.id === profile?.id
+          const isImg = typeof msg.message === 'string' && msg.message.startsWith('[img]')
+          const imgUrl = isImg ? msg.message.slice(5) : null
+          return (
+            <div key={msg.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed
+                ${mine ? 'rounded-br-sm bg-[#4fd1ff]/15 text-[#4fd1ff]' : 'rounded-bl-sm bg-white/[0.07] text-white'}`}
+              >
+                {!mine && (
+                  <p className="mb-0.5 text-[10px] font-semibold text-white/50">
+                    {msg.sender?.full_name ?? msg.sender?.username}
+                  </p>
+                )}
+                {isImg
+                  ? <img src={imgUrl} alt="Shared" className="max-h-52 rounded-xl object-cover" />
+                  : <span>{msg.message}</span>
+                }
+                <p className={`mt-0.5 text-[10px] ${mine ? 'text-[#4fd1ff]/50' : 'text-white/35'}`}>
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-white/[0.1] p-3">
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleImagePick} className="sr-only" />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 text-white/50 hover:border-white/30 hover:text-white disabled:opacity-30"
+        >
+          {uploading ? <Spinner size="sm" /> : <FiImage size={15} />}
+        </button>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Type a message…"
+          className="flex-1 rounded-xl border border-white/20 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[#4fd1ff]/30 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim() || sending}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4fd1ff]/15 text-[#4fd1ff] hover:bg-[#4fd1ff]/25 disabled:opacity-30"
+        >
+          {sending ? <Spinner size="sm" /> : <FiSend size={15} />}
+        </button>
+      </form>
+    </>
+  )
+}
+
+export default function BorrowChatModal({ item, itemType, onClose }) {
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
+  const [isOwner, setIsOwner]         = useState(false)
+  const [chat, setChat]               = useState(null)      // customer view
+  const [ownerChats, setOwnerChats]   = useState([])        // seller view
+  const [activeChat, setActiveChat]   = useState(null)      // seller selected chat
+
+  useEffect(() => {
+    studiesApi.startChat({ item_id: item.id, item_type: itemType })
+      .then(d => {
+        if (d.isOwner) {
+          setIsOwner(true)
+          setOwnerChats(d.chats ?? [])
+        } else {
+          setChat(d.chat)
+        }
+      })
+      .catch(e => setError(e.message ?? 'Could not open chat'))
+      .finally(() => setLoading(false))
+  }, [item.id, itemType])
+
   const Icon      = itemType === 'book' ? FiBook : FiTool
   const accentCls = itemType === 'book' ? 'bg-[#4fd1ff]/15 text-[#4fd1ff]' : 'bg-violet-400/15 text-violet-400'
   const itemName  = item.title ?? item.name
-  const sellerName = chat?.owner?.full_name ?? chat?.owner?.username ?? item.owner?.full_name ?? item.owner?.username ?? 'Seller'
 
   return (
     <AnimatePresence>
@@ -123,100 +208,85 @@ export default function BorrowChatModal({ item, itemType, onClose }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{itemName}</p>
-              <p className="text-xs text-white/60">
-                {item.price > 0 ? `₹${item.price} deposit` : 'Free to borrow'}
-                {' · '}Chat with {sellerName}
+              <p className="text-xs text-white/50">
+                {isOwner ? 'Customer inquiries' : 'Chat with seller'}
               </p>
             </div>
-            <button onClick={onClose} className="ml-1 shrink-0 rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/5 hover:text-white">
+            <button onClick={onClose} className="ml-1 shrink-0 rounded-lg p-1.5 text-white/40 hover:bg-white/5 hover:text-white">
               <FiX size={18} />
             </button>
           </div>
 
-          {/* Price banner */}
-          {item.price > 0 && (
-            <div className="border-b border-white/[0.10] bg-emerald-400/5 px-4 py-2.5">
-              <p className="text-xs text-emerald-400">
-                ₹{item.price} deposit — confirm price and condition with {sellerName} before borrowing.
-              </p>
+          {/* Body */}
+          {loading && (
+            <div className="flex flex-1 items-center justify-center">
+              <Spinner size="md" />
             </div>
           )}
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {starting && (
-              <div className="flex justify-center py-8"><Spinner size="md" /></div>
-            )}
-            {!starting && chatError && (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <p className="text-sm font-medium text-rose-400">{chatError}</p>
-              </div>
-            )}
-            {!starting && !chatError && messages.length === 0 && (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <Icon size={32} className="text-white/20" />
-                <p className="text-sm font-medium text-white">Chat with {sellerName}</p>
-                <p className="text-xs text-white/50">Ask about availability, condition, price, or anything else before you borrow.</p>
-              </div>
-            )}
-            {messages.map(msg => {
-              const mine  = msg.sender?.id === profile?.id
-              const isImg = typeof msg.message === 'string' && msg.message.startsWith('[img]')
-              const imgUrl = isImg ? msg.message.slice(5) : null
-              return (
-                <div key={msg.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed
-                    ${mine
-                      ? 'rounded-br-sm bg-[#4fd1ff]/15 text-[#4fd1ff]'
-                      : 'rounded-bl-sm bg-white/[0.07] text-white'}`}
-                  >
-                    {!mine && (
-                      <p className="mb-0.5 text-[10px] font-semibold text-white/60">
-                        {msg.sender?.full_name ?? msg.sender?.username}
-                      </p>
-                    )}
-                    {isImg ? (
-                      <img src={imgUrl} alt="Shared" className="max-h-52 rounded-xl object-cover" />
-                    ) : (
-                      <span>{msg.message}</span>
-                    )}
-                    <p className={`mt-0.5 text-[10px] ${mine ? 'text-[#4fd1ff]/60' : 'text-white/40'}`}>
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
-            <div ref={bottomRef} />
-          </div>
+          {!loading && error && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+              <p className="text-sm font-medium text-rose-400">{error}</p>
+            </div>
+          )}
 
-          {/* Input row */}
-          <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-white/[0.15] p-3">
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImagePick} className="sr-only" />
-            <button
-              type="button"
-              title="Share a photo"
-              onClick={() => fileRef.current?.click()}
-              disabled={!chat || uploading || !!chatError}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 text-white/50 transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
-            >
-              {uploading ? <Spinner size="sm" /> : <FiImage size={15} />}
-            </button>
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Ask about price, condition, availability…"
-              disabled={!chat || starting || !!chatError}
-              className="flex-1 rounded-xl border border-white/20 bg-white/[0.05] px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[#4fd1ff]/30 focus:outline-none disabled:opacity-40"
+          {/* Owner inbox — list of customer chats */}
+          {!loading && !error && isOwner && !activeChat && (
+            <div className="flex-1 overflow-y-auto p-4">
+              {ownerChats.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                  <FiMessageSquare size={32} className="text-white/20" />
+                  <p className="text-sm text-white/50">No customer inquiries yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+                    {ownerChats.length} conversation{ownerChats.length !== 1 ? 's' : ''}
+                  </p>
+                  {ownerChats.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setActiveChat(c)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3.5 text-left transition-all hover:border-[#4fd1ff]/30 hover:bg-white/[0.07]"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#4fd1ff]/30 to-violet-500/30 text-sm font-black text-[#4fd1ff]">
+                        {(c.customer?.full_name ?? c.customer?.username ?? '?')[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-white">
+                          {c.customer?.full_name ?? c.customer?.username ?? 'Anonymous'}
+                        </p>
+                        <p className="text-xs text-white/40">
+                          @{c.customer?.username ?? '—'} · {new Date(c.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <FiArrowLeft size={14} className="shrink-0 rotate-180 text-white/30" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Owner viewing a customer thread */}
+          {!loading && !error && isOwner && activeChat && (
+            <ChatThread
+              chatId={activeChat.id}
+              otherName={activeChat.customer?.full_name ?? activeChat.customer?.username ?? 'Customer'}
+              onBack={() => setActiveChat(null)}
+              itemType={itemType}
             />
-            <button
-              type="submit"
-              disabled={!input.trim() || !chat || sending || !!chatError}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4fd1ff]/15 text-[#4fd1ff] transition-colors hover:bg-[#4fd1ff]/25 disabled:opacity-30"
-            >
-              {sending ? <Spinner size="sm" /> : <FiSend size={15} />}
-            </button>
-          </form>
+          )}
+
+          {/* Customer chat thread */}
+          {!loading && !error && !isOwner && chat && (
+            <ChatThread
+              chatId={chat.id}
+              otherName={chat.owner?.full_name ?? chat.owner?.username ?? 'Seller'}
+              onBack={null}
+              itemType={itemType}
+            />
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

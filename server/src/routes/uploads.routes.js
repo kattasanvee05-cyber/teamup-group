@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/authenticate.js';
-import { uploadResume, uploadItemImage } from '../controllers/uploads.controller.js';
+import { uploadResume, uploadItemImage, uploadAvatar } from '../controllers/uploads.controller.js';
 
 const router = Router();
 
@@ -37,6 +37,7 @@ const imageUpload = multer({
 });
 
 router.post('/resume',     authenticate, pdfUpload.single('resume'),   multerErrorHandler, uploadResume);
+router.post('/avatar',     authenticate, imageUpload.single('avatar'), multerErrorHandler, uploadAvatar);
 router.post('/item-image', authenticate, imageUpload.single('image'),  multerErrorHandler, uploadItemImage);
 
 export default router;

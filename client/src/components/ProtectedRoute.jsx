@@ -13,5 +13,5 @@ export default function ProtectedRoute({ children }) {
     )
   }
 
-  return isAuth ? children : <Navigate to="/login" replace />
+  return isAuth ? children : <Navigate to="/" replace />
 }

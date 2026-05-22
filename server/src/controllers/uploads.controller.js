@@ -16,6 +16,24 @@ export async function uploadResume(req, res) {
   res.json({ url: data.publicUrl });
 }
 
+// POST /api/uploads/avatar
+export async function uploadAvatar(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const ext      = req.file.mimetype === 'image/png' ? '.png' : req.file.mimetype === 'image/webp' ? '.webp' : '.jpg';
+  const filePath = `${req.profile.id}/avatar${ext}`;
+
+  const { error } = await supabaseAdmin.storage
+    .from('avatars')
+    .upload(filePath, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { data } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
+  await supabaseAdmin.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', req.profile.id);
+  res.json({ url: data.publicUrl });
+}
+
 // POST /api/uploads/item-image
 export async function uploadItemImage(req, res) {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

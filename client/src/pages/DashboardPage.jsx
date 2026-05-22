@@ -1,315 +1,651 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import {
+  motion, AnimatePresence,
+  useMotionValue, useTransform, animate as amt,
+} from 'framer-motion'
 import { useAuth } from '../context/AuthContext.jsx'
 import { opportunitiesApi } from '../api/opportunities.js'
 import { internshipsApi } from '../api/internships.js'
-import { teamsApi } from '../api/teams.js'
+import { clubsApi } from '../api/clubs.js'
 import { applicationsApi } from '../api/applications.js'
 import {
   FiZap, FiBriefcase, FiUsers, FiFileText,
-  FiArrowRight, FiBook, FiHelpCircle, FiChevronDown, FiTool,
+  FiArrowRight, FiBook, FiTool, FiClock,
+  FiMail, FiChevronDown, FiTrendingUp,
+  FiArrowUpRight, FiCode,
 } from 'react-icons/fi'
+import SupportUs from '../components/SupportUs.jsx'
 
-const CARDS = [
+/* ─────────────── data ─────────────── */
+const STAT_CARDS = [
   {
     key: 'opportunities', label: 'Opportunities', sub: 'Open roles & projects',
     icon: FiZap, to: '/opportunities',
-    accent: '#a78bfa',
-    border: 'border-violet-400/40',
-    bg: 'from-violet-600/20 to-violet-900/10',
-    num: 'text-violet-300',
-    icon_bg: 'bg-violet-500/20 text-violet-300',
-    glow: 'shadow-violet-500/20',
+    color: '#a78bfa', border: 'rgba(167,139,250,0.22)',
+    glow: 'rgba(250, 148, 139, 0.12)', iconBg: 'rgba(167,139,250,0.14)',
   },
   {
     key: 'internships', label: 'Internships', sub: 'Industry placements',
     icon: FiBriefcase, to: '/internships',
-    accent: '#4fd1ff',
-    border: 'border-cyan-400/40',
-    bg: 'from-cyan-600/20 to-cyan-900/10',
-    num: 'text-cyan-300',
-    icon_bg: 'bg-cyan-500/20 text-cyan-300',
-    glow: 'shadow-cyan-500/20',
+    color: '#4fd1ff', border: 'rgba(79,209,255,0.22)',
+    glow: 'rgba(79,209,255,0.12)', iconBg: 'rgba(79,209,255,0.14)',
   },
   {
-    key: 'teams', label: 'Teams', sub: 'Collaborate & build',
-    icon: FiUsers, to: '/teams',
-    accent: '#34d399',
-    border: 'border-emerald-400/40',
-    bg: 'from-emerald-600/20 to-emerald-900/10',
-    num: 'text-emerald-300',
-    icon_bg: 'bg-emerald-500/20 text-emerald-300',
-    glow: 'shadow-emerald-500/20',
+    key: 'clubs', label: 'Clubs', sub: 'Communities & chat',
+    icon: FiUsers, to: '/clubs',
+    color: '#34d399', border: 'rgba(52,211,153,0.22)',
+    glow: 'rgba(52,211,153,0.12)', iconBg: 'rgba(52,211,153,0.14)',
   },
   {
     key: 'applications', label: 'Applications', sub: 'My submissions',
     icon: FiFileText, to: '/applications',
-    accent: '#fbbf24',
-    border: 'border-amber-400/40',
-    bg: 'from-amber-600/20 to-amber-900/10',
-    num: 'text-amber-300',
-    icon_bg: 'bg-amber-500/20 text-amber-300',
-    glow: 'shadow-amber-500/20',
+    color: '#fbbf24', border: 'rgba(251,191,36,0.22)',
+    glow: 'rgba(251,191,36,0.12)', iconBg: 'rgba(251,191,36,0.14)',
   },
 ]
 
-const QUICK = [
-  { to: '/opportunities', label: 'Browse Opportunities',    icon: FiZap,       cls: 'border-violet-400/50 bg-violet-500/10 text-white hover:bg-violet-500/20 hover:border-violet-400/80' },
-  { to: '/internships',   label: 'Find Internships',        icon: FiBriefcase, cls: 'border-cyan-400/50 bg-cyan-500/10 text-white hover:bg-cyan-500/20 hover:border-cyan-400/80' },
-  { to: '/teams',         label: 'Create / Join a Team',    icon: FiUsers,     cls: 'border-emerald-400/50 bg-emerald-500/10 text-white hover:bg-emerald-500/20 hover:border-emerald-400/80' },
-  { to: '/studies',       label: 'Borrow Books & Drafters', icon: FiBook,      cls: 'border-pink-400/50 bg-pink-500/10 text-white hover:bg-pink-500/20 hover:border-pink-400/80' },
+const QUICK_ACTIONS = [
+  { to: '/opportunities', label: 'Browse Opportunities', desc: 'Roles & projects', icon: FiZap,       color: '#a78bfa', bg: 'rgba(139,92,246,0.08)',  border: 'rgba(139,92,246,0.24)',  hover: 'rgba(139,92,246,0.14)'  },
+  { to: '/internships',   label: 'Find Internships',     desc: 'Industry roles',   icon: FiBriefcase,  color: '#4fd1ff', bg: 'rgba(79,209,255,0.08)',  border: 'rgba(79,209,255,0.24)',  hover: 'rgba(79,209,255,0.14)'  },
+  { to: '/clubs',          label: 'Join a Club',           desc: 'Community & chat', icon: FiUsers,      color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.24)',  hover: 'rgba(52,211,153,0.14)'  },
+  { to: '/studies',       label: 'Borrow Resources',     desc: 'Books & drafters', icon: FiBook,       color: '#f472b6', bg: 'rgba(244,114,182,0.08)', border: 'rgba(244,114,182,0.24)', hover: 'rgba(244,114,182,0.14)' },
 ]
 
-const FAQ = [
+const STUDY_ITEMS = [
+  {
+    icon: FiBook, to: '/studies',
+    title: 'Library Books',
+    description: '10 textbooks across Engineering, CS, Civil, Physics and more.',
+    cta: 'Browse Books',
+    color: '#4fd1ff', iconBg: 'rgba(79,209,255,0.14)',
+    border: 'rgba(79,209,255,0.18)', ctaBg: 'rgba(79,209,255,0.10)',
+    ctaHover: 'rgba(79,209,255,0.18)',
+  },
+  {
+    icon: FiTool, to: '/studies',
+    title: 'Drafters & Instruments',
+    description: 'Mini drafters, set squares, compass sets, scale rulers.',
+    cta: 'Browse Equipment',
+    color: '#a78bfa', iconBg: 'rgba(167,139,250,0.14)',
+    border: 'rgba(167,139,250,0.18)', ctaBg: 'rgba(167,139,250,0.10)',
+    ctaHover: 'rgba(167,139,250,0.18)',
+  },
+  {
+    icon: FiClock, to: null,
+    title: 'Library Hours',
+    lines: ['Mon – Sat  ·  10:00 AM – 5:00 PM', 'Sunday — Closed'],
+    color: '#fbbf24', iconBg: 'rgba(251,191,36,0.14)',
+    border: 'rgba(251,191,36,0.18)',
+  },
+]
+
+const FAQ_ITEMS = [
   { q: 'How do I apply to an opportunity or internship?',
-    a: 'Open any listing from Opportunities or Internships, then click "Apply Now". A form will expand where you can add a cover letter and resume URL before submitting.' },
-  { q: 'How do I create or join a team?',
-    a: 'Go to Teams → "New Team" to create one, or browse existing teams and click "View Team" then "Join Team" from the detail page.' },
+    a: 'Open any listing from Opportunities or Internships, then click "Apply Now". Fill in your cover letter and resume URL in the form that appears.' },
+  { q: 'How do I join a club?',
+    a: 'Go to Clubs, browse the list, and click "Join" on any club. Once joined you get access to the club chat with channels like general, hackathon, and announcements.' },
   { q: 'How do I borrow a book or drafter?',
-    a: 'Visit the Studies page and choose the Books or Drafters & Equipment tab. Find the item and click Borrow. Books are due in 14 days, equipment in 7 days.' },
+    a: 'Visit the Studies page, pick the Books or Drafters tab, find your item and click Borrow. Books are due in 14 days; equipment in 7 days.' },
   { q: 'Where can I track my applications?',
-    a: 'The Applications page shows everything you\'ve applied to with real-time status: Pending → Reviewing → Accepted or Rejected.' },
+    a: "The Applications page tracks everything you've submitted with live status updates: Pending → Reviewing → Accepted or Rejected." },
   { q: 'Can I return a borrowed item early?',
-    a: 'Yes — go to Studies → My Borrows and click "Return" on any active borrow. The copy goes back to the library inventory immediately.' },
+    a: 'Yes — open Studies → My Borrows and click Return on any active borrow. Inventory updates immediately.' },
 ]
 
-function count(data, key) {
-  if (!data) return 0
-  if (Array.isArray(data)) return data.length
-  return data[key]?.length ?? data.total ?? 0
+/* ─────────────── animation variants ─────────────── */
+const stagger = {
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.0 } },
+}
+const fadeUp = {
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
 }
 
-const fade = (delay = 0) => ({
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] },
-})
+/* ─────────────── helpers ─────────────── */
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
+/* ─────────────── animated counter ─────────────── */
+function Counter({ to }) {
+  const count   = useMotionValue(0)
+  const display = useTransform(count, v => Math.round(v))
+  useEffect(() => {
+    const ctrl = amt(count, to, { duration: 1.1, ease: 'easeOut' })
+    return ctrl.stop
+  }, [to])
+  return <motion.span>{display}</motion.span>
+}
+
+/* ─────────────── stat card ─────────────── */
+function StatCard({ card, stat, loading }) {
+  const { label, sub, icon: Icon, to, color, border, glow, iconBg } = card
+  return (
+    <Link to={to}>
+      <motion.div
+        variants={fadeUp}
+        whileHover={{ y: -6, transition: { duration: 0.22, ease: 'easeOut' } }}
+        className="relative flex flex-col gap-8 overflow-hidden rounded-2xl p-9 backdrop-blur-sm cursor-pointer"
+        style={{
+          background: 'linear-gradient(145deg, rgba(255,255,255,0.048) 0%, rgba(255,255,255,0.016) 100%)',
+          border: `1px solid ${border}`,
+          boxShadow: `0 2px 20px ${glow}, 0 1px 1px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06)`,
+          transition: 'box-shadow 0.25s, border-color 0.25s',
+        }}
+      >
+        {/* Icon + trend */}
+        <div className="flex items-start justify-between">
+          <div className="flex h-13 w-13 items-center justify-center rounded-xl" style={{ background: iconBg }}>
+            <Icon size={22} style={{ color }} />
+          </div>
+          <FiTrendingUp size={14} className="mt-0.5 text-white/20 transition-colors" />
+        </div>
+
+        {/* Stat number */}
+        <div>
+          {loading ? (
+            <div className="skeleton mb-3 h-10 w-20" />
+          ) : (
+            <p className="text-5xl font-black tabular-nums leading-[1.1]" style={{ color }}>
+              <Counter to={stat ?? 0} />
+            </p>
+          )}
+          <p className="mt-4 text-base font-bold text-white">{label}</p>
+          <p className="mt-1.5 text-sm text-white/50">{sub}</p>
+        </div>
+
+        {/* Arrow */}
+        <FiArrowRight
+          size={14}
+          className="absolute bottom-6 right-6"
+          style={{ color: `${color}99` }}
+        />
+
+        {/* Bottom line */}
+        <div className="absolute inset-x-0 bottom-0 h-[2px] rounded-b-2xl"
+          style={{ background: `linear-gradient(90deg, transparent, ${color}66, transparent)` }}
+        />
+      </motion.div>
+    </Link>
+  )
+}
+
+/* ─────────────── quick action card ─────────────── */
+function QuickCard({ item }) {
+  const { to, label, desc, icon: Icon, color, bg, border, hover } = item
+  return (
+    <Link to={to}>
+      <motion.div
+        variants={fadeUp}
+        whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.18 } }}
+        className="group flex items-center gap-6 rounded-2xl px-7 py-6 backdrop-blur-sm cursor-pointer transition-all duration-200"
+        style={{ background: bg, border: `1.5px solid ${border}` }}
+        onMouseEnter={e => { e.currentTarget.style.background = hover }}
+        onMouseLeave={e => { e.currentTarget.style.background = bg }}
+      >
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: `${color}22` }}>
+          <Icon size={20} style={{ color }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-white">{label}</p>
+          <p className="mt-0.5 text-sm text-white/50">{desc}</p>
+        </div>
+        <FiArrowRight size={15}
+          className="shrink-0 text-white/25 transition-all duration-200 group-hover:translate-x-1"
+          style={{ color: `${color}99` }}
+        />
+      </motion.div>
+    </Link>
+  )
+}
+
+/* ─────────────── study card ─────────────── */
+function StudyCard({ item }) {
+  const { icon: Icon, to, title, description, lines, cta, color, iconBg, border, ctaBg, ctaHover } = item
+  return (
+    <motion.div
+      variants={fadeUp}
+      whileHover={{ y: -4, transition: { duration: 0.18 } }}
+      className="flex flex-col gap-6 rounded-2xl p-9 backdrop-blur-sm"
+      style={{
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.042) 0%, rgba(255,255,255,0.012) 100%)',
+        border: `1px solid ${border}`,
+        boxShadow: `0 2px 16px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.055)`,
+      }}
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: iconBg }}>
+        <Icon size={22} style={{ color }} />
+      </div>
+      <div className="flex-1">
+        <p className="text-base font-bold text-white">{title}</p>
+        {description && (
+          <p className="mt-2.5 text-sm leading-relaxed text-white/60">{description}</p>
+        )}
+        {lines && (
+          <div className="mt-2.5 space-y-1">
+            {lines.map((l, i) => (
+              <p key={i} className={`text-sm ${i === 0 ? 'text-white/75' : 'text-white/45'}`}>{l}</p>
+            ))}
+          </div>
+        )}
+      </div>
+      {cta && to && (
+        <Link
+          to={to}
+          className="inline-flex items-center gap-2 self-start rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200"
+          style={{ background: ctaBg, color }}
+          onMouseEnter={e => { e.currentTarget.style.background = ctaHover }}
+          onMouseLeave={e => { e.currentTarget.style.background = ctaBg }}
+        >
+          {cta} <FiArrowRight size={13} />
+        </Link>
+      )}
+    </motion.div>
+  )
+}
+
+/* ─────────────── FAQ item ─────────────── */
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className={`overflow-hidden rounded-2xl border backdrop-blur-sm transition-all duration-300 ${open ? 'border-[#4fd1ff]/30 bg-[#04080f]/95' : 'border-white/20 bg-[#04080f]/90'}`}>
+    <div
+      style={{
+        background: '#1a2e4a',
+        border: `2px solid ${open ? '#4fd1ff' : 'rgba(79,209,255,0.5)'}`,
+        borderRadius: '14px',
+        overflow: 'hidden',
+      }}
+    >
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
+        style={{
+          display: 'flex', width: '100%', alignItems: 'center',
+          justifyContent: 'space-between', gap: '16px',
+          padding: '20px 24px', textAlign: 'left',
+          background: 'transparent', cursor: 'pointer',
+        }}
       >
-        <span className="text-sm font-semibold text-white">{q}</span>
-        <FiChevronDown
-          size={16}
-          className={`mt-0.5 shrink-0 text-[#4fd1ff] transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-        />
+        <span style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', lineHeight: 1.5 }}>{q}</span>
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          style={{ flexShrink: 0 }}
+        >
+          <FiChevronDown size={18} style={{ color: open ? '#4fd1ff' : '#94a3b8' }} />
+        </motion.div>
       </button>
-      {open && (
-        <div className="px-5 pb-4 text-sm leading-7 text-white">{a}</div>
-      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <p style={{ padding: '0 24px 20px', fontSize: '14px', lineHeight: 1.8, color: '#cbd5e1' }}>{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
+/* ─────────────── page ─────────────── */
 export default function DashboardPage() {
   const { profile } = useAuth()
-  const [stats, setStats] = useState(null)
+  const [stats, setStats]     = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.allSettled([
       opportunitiesApi.list(),
       internshipsApi.list(),
-      teamsApi.list(),
+      clubsApi.list(),
       applicationsApi.mine(),
-    ]).then(([opps, ints, teams, apps]) => {
+    ]).then(([opps, ints, clubs, apps]) => {
+      function c(d, k) {
+        if (!d) return 0
+        if (Array.isArray(d)) return d.length
+        return d[k]?.length ?? d.total ?? 0
+      }
       setStats({
-        opportunities: count(opps.value, 'opportunities'),
-        internships:   count(ints.value, 'internships'),
-        teams:         count(teams.value, 'teams'),
-        applications:  count(apps.value, 'applications'),
+        opportunities: c(opps.value, 'opportunities'),
+        internships:   c(ints.value, 'internships'),
+        clubs:         c(clubs.value, 'clubs'),
+        applications:  c(apps.value, 'applications'),
       })
     }).finally(() => setLoading(false))
   }, [])
 
-  const name = profile?.full_name ?? profile?.username ?? 'User'
+  const name     = profile?.full_name ?? profile?.username ?? 'User'
+  const greeting = getGreeting()
 
   return (
-    <div className="min-h-screen w-full px-6 pb-20 lg:px-16 xl:px-24" style={{ paddingTop: 'calc(4.5rem + 3rem)' }}>
+    <div
+      className="w-full px-5 pb-72 sm:px-8 lg:px-14 xl:px-20 2xl:px-28"
+      style={{ paddingTop: 'calc(4.5rem + 5rem)' }}
+    >
+      <div className="mx-auto max-w-screen-xl">
 
-      {/* ── Hero ── */}
-      <motion.div
-        {...fade(0.05)}
-        className="mb-10 rounded-2xl border border-white/[0.12] bg-[#04080f]/90 p-8 backdrop-blur-sm"
-      >
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#4fd1ff]/30 bg-[#4fd1ff]/10 px-4 py-1.5">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-[#4fd1ff]" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-[#4fd1ff]">TEAMUP Dashboard</span>
-        </div>
+        {/* ── Hero ───────────────────────────────────────────────── */}
+        <div
+          className="relative rounded-3xl p-14 sm:p-20"
+          style={{
+            marginBottom: '10rem',
+            background: '#0f1a30',
+            border: '1px solid rgba(79,209,255,0.2)',
+            boxShadow: '0 2px 40px rgba(0,0,0,0.4)',
+          }}
+        >
+          {/* Hero glows */}
+          <div className="pointer-events-none absolute inset-0 rounded-3xl"
+            style={{ background: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,209,255,0.07) 0%, transparent 65%)' }}
+          />
+          <div className="pointer-events-none absolute inset-0 rounded-3xl"
+            style={{ background: 'radial-gradient(ellipse 50% 50% at 85% 100%, rgba(167,139,250,0.06) 0%, transparent 65%)' }}
+          />
 
-        <h1 className="flex flex-wrap items-baseline gap-x-5 font-black leading-[1.05] tracking-tight"
-          style={{ fontSize: 'clamp(2.4rem, 6vw, 5.5rem)' }}>
-          <span className="text-white">Welcome back,</span>
-          <span style={{
-            background: 'linear-gradient(90deg,#ff6b6b,#ffa94d,#ffd43b,#69db7c,#4fd1ff,#748ffc,#da77f2)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            paddingBottom: '0.1em',
-          }}>
-            {name}
-          </span>
-        </h1>
-
-        <p className="mt-4 text-lg font-semibold text-white sm:text-xl" style={{ maxWidth: '62ch', lineHeight: 1.75 }}>
-          Explore opportunities, collaborate with teams, borrow study materials, and track every application — all in one place.
-        </p>
-      </motion.div>
-
-      {/* ── content ── */}
-      <div>
-
-      {/* ── Stat cards ── */}
-      <div className="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {CARDS.map(({ key, label, sub, icon: Icon, to, num, border, bg, icon_bg, glow, accent }, i) => (
-          <motion.div key={key} {...fade(0.1 + i * 0.07)}>
-            <Link
-              to={to}
-              className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border ${border} bg-gradient-to-br ${bg} bg-[#04080f]/90 px-4 py-3 backdrop-blur-sm shadow-md ${glow} transition-all duration-300 hover:scale-[1.02] hover:shadow-lg`}
+          <div className="relative">
+            {/* Badge */}
+            <div
+              className="mb-8 inline-flex items-center gap-2.5 rounded-full px-5 py-2"
+              style={{ border: '1px solid rgba(79,209,255,0.28)', background: 'rgba(79,209,255,0.08)' }}
             >
-              {/* Icon */}
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${icon_bg}`}>
-                <Icon size={17} />
-              </div>
-
-              {/* Text */}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white leading-tight">{label}</p>
-                <p className="text-[11px] text-white leading-tight mt-0.5">{sub}</p>
-              </div>
-
-              {/* Count */}
-              <div className="shrink-0 text-right">
-                {loading
-                  ? <div className="h-6 w-7 animate-pulse rounded bg-white/10" />
-                  : <p className={`text-2xl font-black tabular-nums leading-none ${num}`}>{stats?.[key] ?? 0}</p>
-                }
-                <FiArrowRight size={12} className="ml-auto mt-1 text-white opacity-40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100" />
-              </div>
-
-              {/* Bottom glow line */}
-              <div className="absolute bottom-0 left-0 right-0 h-[2px]"
-                style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
-            </Link>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── Quick Actions ── */}
-      <motion.div {...fade(0.38)} className="mb-10">
-        <h2 className="mb-4 text-lg font-bold text-white">Quick Actions</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {QUICK.map(({ to, label, icon: Icon, cls }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`group flex items-center justify-between gap-3 rounded-xl border-2 px-5 py-4 text-sm font-semibold backdrop-blur-sm transition-all duration-200 ${cls}`}
-            >
-              <span className="flex items-center gap-2.5">
-                <Icon size={16} />
-                {label}
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4fd1ff]" />
+              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#4fd1ff]">
+                TEAMUP Platform
               </span>
-              <FiArrowRight size={14} className="opacity-50 transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100" />
-            </Link>
-          ))}
-        </div>
-      </motion.div>
+            </div>
 
-      {/* ── Studies + Help ── */}
-      <div className="grid gap-8 lg:grid-cols-2">
+            {/* Greeting */}
+            <h1
+              className="font-black leading-[1.12] tracking-tight"
+              style={{ fontSize: 'clamp(2.6rem, 6vw, 5.6rem)' }}
+            >
+              <span className="text-white">{greeting}, </span>
+              <span style={{
+                background: 'linear-gradient(100deg,#ff6b6b 0%,#ffa94d 20%,#ffd43b 35%,#69db7c 50%,#4fd1ff 65%,#748ffc 80%,#da77f2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                display: 'inline-block',
+                paddingBottom: '0.1em',
+              }}>
+                {name}.
+              </span>
+            </h1>
 
-        {/* Studies */}
-        <motion.div {...fade(0.45)}>
-          <h2 className="mb-4 text-lg font-bold text-white">Studies & Library</h2>
-          <div className="space-y-3">
-            {[
-              {
-                to: '/studies',
-                label: 'Library Books',
-                sub: '10 textbooks available — Engineering, CS, Civil and more',
-                icon: FiBook,
-                cls: 'border-cyan-400/40 bg-cyan-950/60 hover:bg-cyan-900/60 hover:border-cyan-400/70',
-                icon_bg: 'bg-cyan-500/20 text-cyan-300',
-              },
-              {
-                to: '/studies',
-                label: 'Drafters & Instruments',
-                sub: 'Mini drafters, set squares, compass sets, scale rulers and more',
-                icon: FiTool,
-                cls: 'border-violet-400/40 bg-violet-950/60 hover:bg-violet-900/60 hover:border-violet-400/70',
-                icon_bg: 'bg-violet-500/20 text-violet-300',
-              },
-            ].map(({ to, label, sub, icon: Icon, cls, icon_bg }) => (
-              <Link key={label} to={to}
-                className={`group flex items-center gap-4 rounded-xl border-2 px-5 py-4 backdrop-blur-sm transition-all duration-200 ${cls}`}
+            <p
+              className="mt-8 text-lg text-white/65 sm:text-xl"
+              style={{ maxWidth: '58ch', lineHeight: 1.85 }}
+            >
+              Explore opportunities, collaborate with teams, borrow study materials,
+              and track every application — all from one place.
+            </p>
+
+            {/* CTA row */}
+            <div className="mt-12 flex flex-wrap gap-4">
+              <Link
+                to="/opportunities"
+                className="inline-flex items-center gap-2.5 rounded-xl px-7 py-3.5 text-sm font-semibold text-[#060a14] transition-all duration-200 hover:brightness-110"
+                style={{ background: 'linear-gradient(135deg,#4fd1ff,#818cf8)' }}
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${icon_bg}`}>
-                  <Icon size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">{label}</p>
-                  <p className="mt-0.5 text-xs text-white">{sub}</p>
-                </div>
-                <FiArrowRight size={14} className="shrink-0 text-white transition-all duration-200 group-hover:translate-x-1 group-hover:text-white" />
+                Browse Opportunities <FiArrowUpRight size={15} />
               </Link>
-            ))}
-
-            <div className="rounded-xl border-2 border-amber-400/40 bg-amber-950/60 px-5 py-4 backdrop-blur-sm">
-              <p className="text-sm font-bold text-amber-300">Library Hours</p>
-              <p className="mt-1 text-sm text-white">Mon – Sat &nbsp;·&nbsp; 10:00 AM – 5:00 PM</p>
-              <p className="text-xs text-white mt-0.5">Sunday — Closed</p>
+              <Link
+                to="/clubs"
+                className="inline-flex items-center gap-2.5 rounded-xl px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200"
+                style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.05)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              >
+                Join a Club
+              </Link>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Help / FAQ */}
-        <motion.div {...fade(0.5)}>
-          <h2 className="mb-4 flex items-center gap-2.5 text-lg font-bold text-white">
-            <FiHelpCircle size={18} className="text-[#4fd1ff]" />
-            Help & FAQ
-          </h2>
-          <div className="space-y-2.5">
-            {FAQ.map((item, i) => <FaqItem key={i} {...item} />)}
+        {/* ── Stats ──────────────────────────────────────────────── */}
+        <motion.section
+          variants={stagger}
+          animate="show"
+          style={{ marginBottom: '10rem' }}
+        >
+          <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '2.5rem' }}>Platform Overview</p>
+          <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+            {STAT_CARDS.map(card => (
+              <StatCard
+                key={card.key}
+                card={card}
+                stat={stats?.[card.key]}
+                loading={loading}
+              />
+            ))}
           </div>
-        </motion.div>
+        </motion.section>
+
+        {/* ── Quick Actions ───────────────────────────────────────── */}
+        <section style={{ marginBottom: '10rem' }}>
+          <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '2.5rem' }}>Quick Actions</p>
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            {QUICK_ACTIONS.map(item => <QuickCard key={item.to} item={item} />)}
+          </motion.div>
+        </section>
+
+        {/* ── FAQ + Studies split ─────────────────────────────────── */}
+        <div className="grid gap-16 xl:grid-cols-[1fr_420px]" style={{ marginBottom: '10rem' }}>
+
+          {/* FAQ */}
+          <section>
+            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#4fd1ff', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'inline-flex', height: '16px', width: '16px', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'rgba(79,209,255,0.25)' }}>
+                <span style={{ fontSize: '8px', color: '#4fd1ff' }}>?</span>
+              </span>
+              Frequently Asked
+            </p>
+            <div className="space-y-5">
+              {FAQ_ITEMS.map((item, i) => <FaqItem key={i} {...item} />)}
+            </div>
+          </section>
+
+          {/* Studies sidebar */}
+          <section>
+            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '2.5rem' }}>Studies & Library</p>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              {STUDY_ITEMS.map((item, i) => <StudyCard key={i} item={item} />)}
+            </motion.div>
+          </section>
+
+        </div>
+
+        {/* ── Divider ────────────────────────────────────────────── */}
+        <div className="divider" style={{ marginBottom: '8rem' }} />
+
+        {/* ── About Us ────────────────────────────────────────────── */}
+        <section style={{ marginBottom: '0' }}>
+          <div
+            className="relative overflow-hidden rounded-3xl p-12 sm:p-20"
+            style={{
+              background: '#0f1a30',
+              border: '1px solid rgba(167,139,250,0.35)',
+              boxShadow: '0 2px 32px rgba(0,0,0,0.32)',
+            }}
+          >
+            {/* Glow orbs */}
+            <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.12) 0%, transparent 65%)' }} />
+            <div className="pointer-events-none absolute -bottom-12 -left-12 h-56 w-56 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(79,209,255,0.07) 0%, transparent 65%)' }} />
+
+            <div className="relative">
+              <p className="section-label mb-7" style={{ color: '#a78bfa' }}>About Us</p>
+              <h2 className="mb-8 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+                Built for students,<br />
+                <span style={{
+                  background: 'linear-gradient(120deg,#a78bfa 0%,#818cf8 50%,#4fd1ff 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                  display: 'inline-block', paddingBottom: '0.08em',
+                }}>by students.</span>
+              </h2>
+
+              <p className="mb-6 max-w-3xl text-base leading-9 text-white/85">
+                TEAMUP is a college collaboration platform built to close the gap between students and
+                real-world opportunities. Whether you're hunting for your first internship, forming a
+                project team, or borrowing a textbook before the exam — everything lives in one place.
+              </p>
+              <p className="mb-14 max-w-3xl text-base leading-9 text-white/75">
+                We believe the best campus experiences happen when students connect, collaborate, and
+                support each other. TEAMUP is the infrastructure for that — simple, fast, and built
+                with the kind of care that only comes from people who've been in those seats.
+              </p>
+
+              {/* Feature highlights */}
+              <div className="grid grid-cols-2 gap-5 sm:grid-cols-4">
+                {[
+                  { icon: FiZap,       label: 'Opportunities', desc: 'Roles & projects',   color: '#a78bfa', bg: 'rgba(167,139,250,0.18)', border: 'rgba(167,139,250,0.45)' },
+                  { icon: FiBriefcase, label: 'Internships',   desc: 'Industry placements', color: '#4fd1ff', bg: 'rgba(79,209,255,0.18)',  border: 'rgba(79,209,255,0.45)'  },
+                  { icon: FiUsers,     label: 'Clubs',         desc: 'Community & chat',    color: '#34d399', bg: 'rgba(52,211,153,0.18)',  border: 'rgba(52,211,153,0.45)'  },
+                  { icon: FiBook,      label: 'Study Library', desc: 'Books & instruments', color: '#fbbf24', bg: 'rgba(251,191,36,0.18)',  border: 'rgba(251,191,36,0.45)'  },
+                ].map(({ icon: Icon, label, desc, color, bg, border }) => (
+                  <div
+                    key={label}
+                    className="flex flex-col gap-4 rounded-2xl p-6"
+                    style={{ background: bg, border: `1px solid ${border}` }}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${color}22` }}>
+                      <Icon size={18} style={{ color }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{label}</p>
+                      <p className="mt-1 text-xs text-white/50">{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-10 flex items-center gap-3">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <p className="text-sm text-white/40">Built with ♥ by students, for students · JNTUH University</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Divider ────────────────────────────────────────────── */}
+        {/* ── Gap + divider + gap between About and Support ── */}
+        <div style={{ height: '8rem' }} />
+        <div className="divider" />
+        <div style={{ height: '8rem' }} />
+
+        {/* ── Support ─────────────────────────────────────────────── */}
+        <section style={{ marginBottom: '0' }}>
+          <div
+            className="relative overflow-hidden rounded-3xl p-12 sm:p-20"
+            style={{
+              background: '#0f1a30',
+              border: '1px solid rgba(79,209,255,0.35)',
+              boxShadow: '0 2px 32px rgba(0,0,0,0.32)',
+            }}
+          >
+            <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(79,209,255,0.1) 0%, transparent 65%)' }} />
+
+            <div className="relative grid gap-14 lg:grid-cols-[1fr_auto] lg:items-start">
+              <div>
+                <p className="section-label mb-7 text-[#4fd1ff]">Support & Contact</p>
+                <h2 className="mb-8 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+                  We're here to help.
+                </h2>
+                <p className="mb-6 max-w-2xl text-base leading-9 text-white/65">
+                  Running into a bug, have a feature request, or just want to share feedback?
+                  Our team reviews every message and typically responds within one business day.
+                </p>
+                <p className="max-w-2xl text-base leading-9 text-white/50">
+                  For urgent issues — a borrowed item not updating, an application stuck in
+                  pending, or a broken page — please include a brief description of the problem
+                  and your username so we can resolve it quickly.
+                </p>
+
+                <div className="mt-12 flex flex-wrap gap-4">
+                  <a
+                    href="mailto:noreply.teamup.com@gmail.com"
+                    className="inline-flex items-center gap-3 rounded-2xl px-7 py-4 text-sm font-semibold text-[#4fd1ff] transition-all duration-200"
+                    style={{ border: '1px solid rgba(79,209,255,0.28)', background: 'rgba(79,209,255,0.08)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(79,209,255,0.15)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(79,209,255,0.08)' }}
+                  >
+                    <FiMail size={16} />
+                    Send us an email
+                  </a>
+                  <span
+                    className="inline-flex items-center gap-2.5 rounded-2xl px-6 py-4 text-sm text-white/40"
+                    style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Usually responds within 24 hrs
+                  </span>
+                </div>
+              </div>
+
+              {/* Contact card */}
+              <div
+                className="shrink-0 rounded-2xl p-8 lg:w-72"
+                style={{ background: '#1a2744', border: '1px solid rgba(255,255,255,0.2)' }}
+              >
+                <p className="mb-6 text-xs font-bold uppercase tracking-widest" style={{ color: '#94a3b8' }}>Contact</p>
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <FiMail size={15} className="mt-0.5 shrink-0 text-[#4fd1ff]" />
+                    <div>
+                      <p className="text-xs text-white/40">Email</p>
+                      <p className="mt-1 break-all text-sm font-medium text-white/75">noreply.teamup.com@gmail.com</p>
+                    </div>
+                  </div>
+                  <div className="divider" />
+                  <div className="flex items-start gap-4">
+                    <FiClock size={15} className="mt-0.5 shrink-0 text-amber-400" />
+                    <div>
+                      <p className="text-xs text-white/40">Response time</p>
+                      <p className="mt-1 text-sm font-medium text-white/75">Within 1 business day</p>
+                    </div>
+                  </div>
+                  <div className="divider" />
+                  <div className="flex items-start gap-4">
+                    <FiUsers size={15} className="mt-0.5 shrink-0 text-violet-400" />
+                    <div>
+                      <p className="text-xs text-white/40">Team</p>
+                      <p className="mt-1 text-sm font-medium text-white/75">JNTUH University, Student Dev Team</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Footer ──────────────────────────────────────────────── */}
+        <div style={{ height: '8rem' }} />
+        <div className="divider" />
+        <p style={{ paddingTop: '3rem', paddingBottom: '8rem' }} className="text-center text-xs text-white/22">
+          © {new Date().getFullYear()} TEAMUP · JNTUH University · Built with ♥ by students
+        </p>
 
       </div>
-
-      {/* ── About Us & Support ── */}
-      <motion.div {...fade(0.55)} className="mt-12 grid gap-5 sm:grid-cols-2">
-
-        {/* About Us */}
-        <div className="rounded-2xl border border-white/[0.18] bg-[#04080f]/90 p-6 backdrop-blur-sm">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-violet-400">About Us</h2>
-          <p className="text-sm leading-7 text-white">
-            TEAMUP is a college collaboration platform built to connect students with opportunities, teams, resources, and each other. From borrowing study materials to landing internships — we make campus life smarter and more connected.
-          </p>
-          <p className="mt-3 text-xs text-white">Built with ♥ for students, by students.</p>
-        </div>
-
-        {/* Support */}
-        <div className="rounded-2xl border border-white/[0.18] bg-[#04080f]/90 p-6 backdrop-blur-sm">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-[#4fd1ff]">Support</h2>
-          <p className="text-sm leading-7 text-white">
-            Having trouble or want to report an issue? Our support team is here to help. Reach out and we'll get back to you as soon as possible.
-          </p>
-          <a
-            href="mailto:noreply.teamup.com@gmail.com"
-            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#4fd1ff]/20 bg-[#4fd1ff]/5 px-4 py-2.5 text-sm font-medium text-[#4fd1ff] transition-all duration-200 hover:bg-[#4fd1ff]/15"
-          >
-            noreply.teamup.com@gmail.com
-          </a>
-        </div>
-
-      </motion.div>
-
-      </div>{/* end content */}
+      <SupportUs />
     </div>
   )
 }

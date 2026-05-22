@@ -10,14 +10,16 @@ import BorrowChatModal from '../components/BorrowChatModal.jsx'
 import {
   FiBook, FiTool, FiSearch, FiClock,
   FiRotateCcw, FiList, FiAlertCircle, FiRefreshCw,
-  FiMessageSquare, FiPlus, FiX, FiCalendar, FiArrowRight,
+  FiMessageSquare, FiPlus, FiX, FiCalendar, FiArrowRight, FiPackage,
 } from 'react-icons/fi'
+import SupportUs from '../components/SupportUs.jsx'
 
 const TABS = [
   { key: 'books',     label: 'Books',     icon: FiBook },
   { key: 'equipment', label: 'Drafters',   icon: FiTool },
   { key: 'exchange',  label: 'Exchange',   icon: FiRefreshCw },
   { key: 'borrows',   label: 'My Borrows', icon: FiList },
+  { key: 'my-items',  label: 'My Items',   icon: FiPackage },
 ]
 
 const SUBJECT_COLORS = {
@@ -117,7 +119,7 @@ function BooksTab() {
   return (
     <div>
       <div className="relative mb-6 max-w-md">
-        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={15} />
+        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/45" size={15} />
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -174,7 +176,7 @@ function BooksTab() {
 
                   <h2 className="font-semibold leading-snug text-white line-clamp-1">{book.title}</h2>
                   <p className="mt-0.5 text-xs font-medium text-[#4fd1ff]">{book.author}</p>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-white line-clamp-2">{book.description}</p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-white/65 line-clamp-2">{book.description}</p>
 
                   <p className={`mt-3 text-xs font-medium ${avail ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {avail ? `${book.available_copies}/${book.total_copies} available` : 'All borrowed'}
@@ -257,7 +259,7 @@ function EquipmentTab() {
   return (
     <div>
       <div className="relative mb-6 max-w-md">
-        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={15} />
+        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/45" size={15} />
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -275,7 +277,7 @@ function EquipmentTab() {
         <div className="space-y-10">
           {categories.map(cat => (
             <div key={cat}>
-              <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white">{cat}</h3>
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/60">{cat}</h3>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.filter(e => e.category === cat).map((eq, i) => {
                   const avail   = eq.available_quantity > 0
@@ -309,7 +311,7 @@ function EquipmentTab() {
                         </div>
 
                         <h2 className="font-semibold leading-snug text-white">{eq.name}</h2>
-                        <p className="mt-2 flex-1 text-sm leading-relaxed text-white line-clamp-2">{eq.description}</p>
+                        <p className="mt-2 flex-1 text-sm leading-relaxed text-white/65 line-clamp-2">{eq.description}</p>
 
                         <p className={`mt-3 text-xs font-medium ${avail ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {avail ? `${eq.available_quantity}/${eq.total_quantity} available` : 'None available'}
@@ -410,7 +412,7 @@ function ExchangeTab() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <p className="text-sm text-white">
+        <p className="text-sm text-white/55">
           {listings.length > 0 ? `${listings.length} item${listings.length !== 1 ? 's' : ''} available` : 'No listings yet'}
         </p>
         <motion.button
@@ -436,7 +438,7 @@ function ExchangeTab() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-white">Item type</label>
+                  <label className="mb-1 block text-xs font-medium text-white/60">Item type</label>
                   <select
                     value={form.item_type}
                     onChange={e => setForm(f => ({ ...f, item_type: e.target.value }))}
@@ -448,7 +450,7 @@ function ExchangeTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-white">Condition</label>
+                  <label className="mb-1 block text-xs font-medium text-white/60">Condition</label>
                   <select
                     value={form.condition}
                     onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}
@@ -476,7 +478,7 @@ function ExchangeTab() {
                 className="w-full resize-none rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-amber-400/40 focus:outline-none"
               />
               <div>
-                <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white">
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/60">
                   <FiCalendar size={11} /> Available pickup slots (optional)
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -537,7 +539,7 @@ function ExchangeTab() {
 
                 <h2 className="font-semibold leading-snug text-white line-clamp-1">{listing.title}</h2>
                 {listing.description && (
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-white line-clamp-2">{listing.description}</p>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-white/65 line-clamp-2">{listing.description}</p>
                 )}
 
                 {listing.available_slots?.length > 0 && (
@@ -633,7 +635,7 @@ function BorrowsTab() {
     <div className="space-y-8">
       {active.length > 0 && (
         <div>
-          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white">Active Borrows</h3>
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/55">Active Borrows</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {active.map((b, i) => {
               const s       = STATUS_STYLE[b.status] ?? STATUS_STYLE.pending
@@ -647,7 +649,7 @@ function BorrowsTab() {
                     <span className="rounded-full bg-white/5 px-2.5 py-0.5 text-xs capitalize text-white">{b.item_type}</span>
                   </div>
                   <p className="font-semibold text-white line-clamp-1">{b.item_name}</p>
-                  <p className="mt-0.5 text-sm text-white">{b.item_sub}</p>
+                  <p className="mt-0.5 text-sm text-white/60">{b.item_sub}</p>
                   {b.due_date && (
                     <p className={`mt-2 flex items-center gap-1.5 text-xs font-medium ${overdue ? 'text-rose-400' : 'text-white/60'}`}>
                       {overdue ? <FiAlertCircle size={12} /> : <FiClock size={12} />}
@@ -671,7 +673,7 @@ function BorrowsTab() {
 
       {history.length > 0 && (
         <div>
-          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white">History</h3>
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/55">History</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {history.map((b, i) => {
               const s = STATUS_STYLE[b.status] ?? STATUS_STYLE.returned
@@ -683,7 +685,7 @@ function BorrowsTab() {
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
                   </div>
                   <p className="font-semibold text-white line-clamp-1">{b.item_name}</p>
-                  <p className="mt-0.5 text-sm capitalize text-white">{b.item_type}</p>
+                  <p className="mt-0.5 text-sm capitalize text-white/55">{b.item_type}</p>
                 </motion.div>
               )
             })}
@@ -694,58 +696,160 @@ function BorrowsTab() {
   )
 }
 
+// ── My Items tab ──────────────────────────────────────────────────────────
+function MyItemsTab() {
+  const [books, setBooks]       = useState([])
+  const [equip, setEquip]       = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [chatTarget, setChatTarget] = useState(null)
+  const [chatType, setChatType] = useState(null)
+
+  useEffect(() => {
+    studiesApi.myItems()
+      .then(d => { setBooks(d.books ?? []); setEquip(d.equipment ?? []) })
+      .catch(e => toast.error(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div className="flex h-52 items-center justify-center"><Spinner size="lg" /></div>
+
+  const totalBooks = books.length
+  const totalEquip = equip.length
+
+  if (totalBooks === 0 && totalEquip === 0) {
+    return (
+      <div className="flex h-52 flex-col items-center justify-center gap-3 text-white">
+        <FiPackage size={40} />
+        <p className="text-sm">You haven't listed any items yet</p>
+        <p className="text-xs text-white/50">Add books or drafters so others can borrow them</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-10">
+      {books.length > 0 && (
+        <div>
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/55">Your Books ({books.length})</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {books.map((b, i) => (
+              <motion.div key={b.id} {...fade(i)}
+                className="flex flex-col rounded-2xl border border-white/20 bg-[#04080f]/90 p-5 backdrop-blur-sm"
+              >
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${SUBJECT_COLORS[b.subject] ?? SUBJECT_COLORS.default}`}>
+                    {b.subject ?? 'General'}
+                  </span>
+                  {b.price > 0 && (
+                    <span className="rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+                      ₹{b.price} deposit
+                    </span>
+                  )}
+                </div>
+                <p className="font-semibold text-white line-clamp-1">{b.title}</p>
+                <p className="mt-0.5 text-xs text-[#4fd1ff]">{b.author}</p>
+                <p className={`mt-2 text-xs font-medium ${b.available_copies > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {b.available_copies}/{b.total_copies} available
+                </p>
+                <button
+                  onClick={() => { setChatTarget(b); setChatType('book') }}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all hover:border-[#4fd1ff]/40 hover:text-[#4fd1ff]"
+                >
+                  <FiMessageSquare size={13} />
+                  {b.chat_count > 0 ? `${b.chat_count} ${b.chat_count === 1 ? 'Inquiry' : 'Inquiries'}` : 'No inquiries yet'}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {equip.length > 0 && (
+        <div>
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-white/55">Your Equipment ({equip.length})</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {equip.map((e, i) => (
+              <motion.div key={e.id} {...fade(i)}
+                className="flex flex-col rounded-2xl border border-white/20 bg-[#04080f]/90 p-5 backdrop-blur-sm"
+              >
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${COND_COLORS[e.condition] ?? COND_COLORS.good}`}>
+                    {e.condition ?? 'good'}
+                  </span>
+                  {e.price > 0 && (
+                    <span className="rounded-full bg-emerald-400/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+                      ₹{e.price} deposit
+                    </span>
+                  )}
+                </div>
+                <p className="font-semibold text-white">{e.name}</p>
+                <p className="mt-0.5 text-xs text-violet-400">{e.category}</p>
+                <p className={`mt-2 text-xs font-medium ${e.available_quantity > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {e.available_quantity}/{e.total_quantity} available
+                </p>
+                <button
+                  onClick={() => { setChatTarget(e); setChatType('equipment') }}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all hover:border-violet-400/40 hover:text-violet-400"
+                >
+                  <FiMessageSquare size={13} />
+                  {e.chat_count > 0 ? `${e.chat_count} ${e.chat_count === 1 ? 'Inquiry' : 'Inquiries'}` : 'No inquiries yet'}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {chatTarget && chatType && (
+        <BorrowChatModal item={chatTarget} itemType={chatType} onClose={() => { setChatTarget(null); setChatType(null) }} />
+      )}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 export default function StudiesPage() {
   const [tab, setTab] = useState('books')
 
   return (
-    <div className="min-h-screen px-4 pb-20" style={{ paddingTop: 'calc(4.5rem + 2rem)' }}>
+    <div className="min-h-screen px-5 pb-28 sm:px-10" style={{ paddingTop: 'calc(4.5rem + 3.5rem)' }}>
       <div className="mx-auto max-w-7xl">
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-          className="mb-10 rounded-2xl border border-white/[0.12] bg-[#04080f]/90 p-8 backdrop-blur-sm"
-        >
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#4fd1ff]/30 bg-[#4fd1ff]/10 px-4 py-1.5">
+        <div className="mb-12">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#4fd1ff]/30 bg-[#4fd1ff]/8 px-4 py-1.5">
             <span className="h-2 w-2 rounded-full bg-[#4fd1ff]" />
             <span className="text-xs font-semibold uppercase tracking-widest text-[#4fd1ff]">Library & Resources</span>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-white">Studies</h1>
-          <p className="mt-3 text-lg font-semibold text-white">Borrow books, drafters, and instruments — chat before borrowing, or exchange with fellow students.</p>
-        </motion.div>
+          <h1 className="text-5xl font-black tracking-tight text-white sm:text-6xl">Studies</h1>
+          <p className="mt-4 text-lg text-white/75" style={{ maxWidth: '56ch' }}>Borrow books, drafters, and instruments — chat before borrowing, or exchange with fellow students.</p>
+        </div>
 
-        <div className="mb-8 flex flex-wrap gap-1 rounded-xl border border-white/[0.18] bg-[#04080f]/90 p-1 w-fit backdrop-blur-sm">
+        <div className="mb-10 flex flex-wrap gap-1.5 rounded-2xl p-1.5 w-fit" style={{ background: '#1a2744', border: '1px solid rgba(79,209,255,0.3)' }}>
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200
+              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200
                 ${tab === key
                   ? 'bg-[#4fd1ff]/15 text-[#4fd1ff] shadow-sm'
-                  : 'text-white hover:bg-white/5 hover:text-white'}`}
+                  : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
             >
-              <Icon size={14} />
+              <Icon size={15} />
               {label}
             </button>
           ))}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-          >
-            {tab === 'books'     && <BooksTab />}
-            {tab === 'equipment' && <EquipmentTab />}
-            {tab === 'exchange'  && <ExchangeTab />}
-            {tab === 'borrows'   && <BorrowsTab />}
-          </motion.div>
-        </AnimatePresence>
+        <div>
+          {tab === 'books'     && <BooksTab />}
+          {tab === 'equipment' && <EquipmentTab />}
+          {tab === 'exchange'  && <ExchangeTab />}
+          {tab === 'borrows'   && <BorrowsTab />}
+          {tab === 'my-items'  && <MyItemsTab />}
+        </div>
 
       </div>
+      <SupportUs />
     </div>
   )
 }

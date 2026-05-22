@@ -5,19 +5,23 @@ import { opportunitiesApi } from '../api/opportunities.js'
 import toast from 'react-hot-toast'
 import Spinner from '../components/Spinner.jsx'
 import { FiZap, FiMapPin, FiClock, FiSearch, FiDollarSign, FiArrowRight } from 'react-icons/fi'
+import SupportUs from '../components/SupportUs.jsx'
 
-const SKILL_COLORS = [
-  'bg-purple-400/10 text-purple-400',
-  'bg-cyan-400/10 text-cyan-400',
-  'bg-emerald-400/10 text-emerald-400',
-  'bg-orange-400/10 text-orange-400',
-  'bg-pink-400/10 text-pink-400',
-]
+const TYPE_META = {
+  'full-time':  { label: 'Full-time',  color: '#c084fc', bg: 'rgba(192,132,252,0.18)', border: 'rgba(192,132,252,0.45)' },
+  'part-time':  { label: 'Part-time',  color: '#38bdf8', bg: 'rgba(56,189,248,0.18)',  border: 'rgba(56,189,248,0.45)'  },
+  'contract':   { label: 'Contract',   color: '#4ade80', bg: 'rgba(74,222,128,0.18)',  border: 'rgba(74,222,128,0.45)'  },
+  'volunteer':  { label: 'Volunteer',  color: '#fb7185', bg: 'rgba(251,113,133,0.18)', border: 'rgba(251,113,133,0.45)' },
+  'internship': { label: 'Internship', color: '#fbbf24', bg: 'rgba(251,191,36,0.18)',  border: 'rgba(251,191,36,0.45)'  },
+}
+const FALLBACK = { label: 'Opportunity', color: '#c084fc', bg: 'rgba(192,132,252,0.18)', border: 'rgba(192,132,252,0.45)' }
+
+const SKILL_PALETTE = ['#c084fc', '#38bdf8', '#4ade80', '#fb7185', '#fbbf24', '#fb923c']
 
 export default function OpportunitiesPage() {
-  const [items, setItems] = useState([])
+  const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch]   = useState('')
 
   useEffect(() => {
     opportunitiesApi.list()
@@ -34,88 +38,127 @@ export default function OpportunitiesPage() {
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 pt-[4.5rem]">
+    <div className="mx-auto max-w-7xl px-5 pb-28 sm:px-10" style={{ paddingTop: 'calc(4.5rem + 3.5rem)' }}>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-10">
-        <p className="mb-2 text-sm font-bold uppercase tracking-widest text-violet-400">Explore</p>
-        <h1 className="text-5xl font-black tracking-tight text-white">Opportunities</h1>
-        <p className="mt-3 text-lg text-white">Discover projects and roles posted by teachers and organizations.</p>
-      </motion.div>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="mb-12">
+        <div
+          className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+          style={{ background: 'rgba(192,132,252,0.18)', border: '1px solid rgba(192,132,252,0.45)' }}
+        >
+          <FiZap size={12} color="#c084fc" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.15em]" style={{ color: '#c084fc' }}>Explore</span>
+        </div>
+        <h1 className="text-5xl font-black tracking-tight text-white sm:text-6xl">Opportunities</h1>
+        <p className="mt-4 max-w-xl text-lg text-white/75">
+          Discover projects and roles posted by teachers and organizations.
+        </p>
+      </div>
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="mb-8">
-        <div className="relative max-w-md">
-          <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={15} />
+      {/* ── Search ─────────────────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="relative max-w-lg">
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/55" size={16} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by title, company or keyword..."
-            className="w-full rounded-xl border border-white/20 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/70 transition-colors focus:border-purple-500/40 focus:outline-none"
+            placeholder="Search by title, company or keyword…"
+            className="w-full rounded-2xl py-3.5 pl-11 pr-5 text-sm text-white placeholder:text-white/45 focus:outline-none"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)' }}
           />
         </div>
-      </motion.div>
+      </div>
 
+      {/* ── Cards ──────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>
       ) : filtered.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-64 flex-col items-center justify-center gap-3 text-white">
-          <FiZap size={40} />
-          <p className="text-sm">{search ? 'No results found for your search' : 'No opportunities posted yet'}</p>
-        </motion.div>
+        <div className="flex h-64 flex-col items-center justify-center gap-3 text-white/55">
+          <FiZap size={44} />
+          <p className="text-sm">{search ? 'No results found' : 'No opportunities posted yet'}</p>
+        </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item, i) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.06 }}
-              className="group flex flex-col rounded-2xl border border-white/20 bg-[#04080f]/90 p-5 backdrop-blur-sm transition-all duration-300 hover:border-purple-500/30 hover:bg-[#04080f]/92 hover:shadow-lg hover:shadow-purple-500/10"
-            >
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-purple-400/10 px-2.5 py-0.5 text-xs font-medium text-purple-400">
-                  {item.type ?? 'Opportunity'}
-                </span>
-                {item.remote && (
-                  <span className="rounded-full bg-emerald-400/10 px-2.5 py-0.5 text-xs text-emerald-400">Remote</span>
-                )}
-              </div>
-
-              <h2 className="font-semibold leading-snug text-white line-clamp-1">{item.title}</h2>
-              {item.company_name && (
-                <p className="mt-0.5 text-xs font-medium text-[#4fd1ff]">{item.company_name}</p>
-              )}
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-white line-clamp-2">{item.description}</p>
-
-              {item.skills?.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {item.skills.slice(0, 4).map((s, j) => (
-                    <span key={s} className={`rounded-full px-2.5 py-0.5 text-xs ${SKILL_COLORS[j % SKILL_COLORS.length]}`}>{s}</span>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white">
-                {item.location && (
-                  <span className="flex items-center gap-1"><FiMapPin size={10} />{item.location}</span>
-                )}
-                {item.deadline && (
-                  <span className="flex items-center gap-1"><FiClock size={10} />Due {new Date(item.deadline).toLocaleDateString()}</span>
-                )}
-                {item.stipend && (
-                  <span className="flex items-center gap-1 text-emerald-400"><FiDollarSign size={10} />₹{item.stipend}</span>
-                )}
-              </div>
-
-              <Link
-                to={`/opportunities/${item.id}`}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500/10 py-2.5 text-sm font-medium text-purple-400 transition-all duration-200 hover:bg-purple-500/20"
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((item, i) => {
+            const meta = TYPE_META[item.type] ?? FALLBACK
+            return (
+              <motion.div
+                key={item.id}
+                whileHover={{ y: -5, transition: { duration: 0.18 } }}
+                className="flex flex-col rounded-2xl p-6"
+                style={{
+                  background: '#1a2744',
+                  border: `1px solid ${meta.border}`,
+                  borderTop: `3px solid ${meta.color}`,
+                  boxShadow: `0 4px 24px rgba(0,0,0,0.4)`,
+                }}
               >
-                View Details <FiArrowRight size={13} />
-              </Link>
-            </motion.div>
-          ))}
+                {/* Badges */}
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-bold"
+                    style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
+                  >
+                    {meta.label}
+                  </span>
+                  {item.remote && (
+                    <span className="rounded-full px-3 py-1 text-xs font-bold"
+                      style={{ background: 'rgba(74,222,128,0.18)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.45)' }}>
+                      Remote
+                    </span>
+                  )}
+                </div>
+
+                {/* Title + Company */}
+                <h2 className="text-lg font-black leading-snug text-white">{item.title}</h2>
+                {item.company_name && (
+                  <p className="mt-1.5 text-sm font-bold" style={{ color: meta.color }}>{item.company_name}</p>
+                )}
+                {item.department && (
+                  <p className="mt-0.5 text-xs text-white/55">{item.department}</p>
+                )}
+
+                {/* Description */}
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-white/72 line-clamp-3">{item.description}</p>
+
+                {/* Skills */}
+                {item.skills?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {item.skills.slice(0, 4).map((s, j) => (
+                      <span
+                        key={s}
+                        className="rounded-full px-2.5 py-1 text-xs font-semibold"
+                        style={{
+                          background: `${SKILL_PALETTE[j % SKILL_PALETTE.length]}22`,
+                          color: SKILL_PALETTE[j % SKILL_PALETTE.length],
+                          border: `1px solid ${SKILL_PALETTE[j % SKILL_PALETTE.length]}44`,
+                        }}
+                      >{s}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Meta */}
+                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/60">
+                  {item.location && <span className="flex items-center gap-1.5"><FiMapPin size={11} />{item.location}</span>}
+                  {item.deadline && <span className="flex items-center gap-1.5"><FiClock size={11} />Due {new Date(item.deadline).toLocaleDateString()}</span>}
+                  {item.stipend  && <span className="flex items-center gap-1.5 font-bold text-emerald-400"><FiDollarSign size={11} />₹{item.stipend.toLocaleString()}</span>}
+                </div>
+
+                {/* CTA */}
+                <Link
+                  to={`/opportunities/${item.id}`}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all duration-200 hover:brightness-125"
+                  style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
+                >
+                  View Details <FiArrowRight size={13} />
+                </Link>
+              </motion.div>
+            )
+          })}
         </div>
       )}
+      <SupportUs />
     </div>
   )
 }

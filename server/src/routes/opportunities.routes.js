@@ -16,9 +16,9 @@ const router = Router();
 
 router.get   ('/',              authenticate,               listOpportunities);
 router.get   ('/:id',          authenticate,               getOpportunity);
-router.post  ('/',             authenticate, teacherUp,    validate(createOpportunitySchema),  createOpportunity);
-router.patch ('/:id',          authenticate, teacherUp,    validate(updateOpportunitySchema),  updateOpportunity);
-router.delete('/:id',          authenticate, teacherUp,    deleteOpportunity);
+router.post  ('/',             authenticate,               validate(createOpportunitySchema),  createOpportunity);
+router.patch ('/:id',          authenticate,               validate(updateOpportunitySchema),  updateOpportunity);
+router.delete('/:id',          authenticate,               deleteOpportunity);
 router.post  ('/:id/apply',    authenticate,               validate(applyOpportunitySchema),   applyToOpportunity);
 
 export default router;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { notificationsApi } from '../api/notifications.js'
+import toast from 'react-hot-toast'
 import { FiBell, FiX, FiCheckCircle, FiTrash2 } from 'react-icons/fi'
 
 export default function NotificationBell() {
@@ -10,10 +11,28 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false)
   const ref = useRef(null)
 
-  // Poll unread count every 30s
+  // Poll unread count every 30s; toast once per session if unread > 0 on first load
   useEffect(() => {
+    let first = true
     function fetchCount() {
-      notificationsApi.unread().then(d => setUnread(d.unread ?? 0)).catch(() => {})
+      notificationsApi.unread().then(d => {
+        const count = d.unread ?? 0
+        setUnread(count)
+        if (first && count > 0 && !sessionStorage.getItem('notif_alerted')) {
+          sessionStorage.setItem('notif_alerted', '1')
+          toast(`🔔 You have ${count} unread notification${count !== 1 ? 's' : ''}`, {
+            duration: 5000,
+            style: {
+              background: '#0d1628',
+              color: '#f0f4ff',
+              border: '1px solid rgba(79,209,255,0.2)',
+              borderRadius: '14px',
+              fontSize: '13px',
+            },
+          })
+        }
+        first = false
+      }).catch(() => {})
     }
     fetchCount()
     const t = setInterval(fetchCount, 30000)

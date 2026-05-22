@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext.jsx'
+import { uploadsApi } from '../api/uploads.js'
 import toast from 'react-hot-toast'
 import Spinner from '../components/Spinner.jsx'
 import {
   FiUser, FiMail, FiPhone, FiMapPin, FiBook, FiGlobe,
   FiGithub, FiEdit2, FiSave, FiX, FiTag, FiStar,
-  FiCalendar, FiAward, FiShield,
+  FiCalendar, FiAward, FiCamera,
 } from 'react-icons/fi'
 
 const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate', 'Alumni']
@@ -56,10 +57,10 @@ function Field({ icon: Icon, label, value }) {
   return (
     <div className="flex items-start gap-3">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.07]">
-        <Icon size={14} className="text-white" />
+        <Icon size={14} className="text-white/50" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-white mb-0.5">{label}</p>
+        <p className="text-xs font-medium text-white/50 mb-0.5">{label}</p>
         {Array.isArray(value) ? (
           <div className="flex flex-wrap gap-1.5">
             {value.map(v => (
@@ -79,6 +80,25 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarFileRef = useRef(null)
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5 MB'); return }
+    setUploadingAvatar(true)
+    try {
+      const { url } = await uploadsApi.avatar(file)
+      await updateProfile({ avatarUrl: url })
+      toast.success('Profile photo updated!')
+    } catch (err) {
+      toast.error(err.message || 'Upload failed')
+    } finally {
+      setUploadingAvatar(false)
+      e.target.value = ''
+    }
+  }
 
   function startEdit() {
     setForm({
@@ -125,13 +145,13 @@ export default function ProfilePage() {
   const initials = (profile?.full_name ?? profile?.username ?? 'U')[0].toUpperCase()
   const roleBadge = ROLE_BADGE[profile?.role] ?? ROLE_BADGE.student
 
-  const inputCls = "w-full rounded-xl border border-white/15 bg-white/[0.07] px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 focus:border-[#4fd1ff]/50 focus:outline-none transition-colors"
+  const inputCls = "w-full rounded-xl border border-white/15 bg-white/[0.07] px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[#4fd1ff]/50 focus:outline-none transition-colors"
 
   return (
-    <div className="min-h-screen px-4 pb-20 pt-[4.5rem]">
+    <div className="min-h-screen px-4 sm:px-8 pb-20" style={{ paddingTop: 'calc(4.5rem + 2rem)' }}>
       <div className="mx-auto max-w-3xl">
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div>
 
           {/* ── Header ── */}
           <div className="mb-6 flex items-center justify-between">
@@ -153,12 +173,37 @@ export default function ProfilePage() {
           {/* ── Avatar + name card ── */}
           <div className="mb-5 rounded-2xl border border-white/20 bg-[#04080f]/90 p-6 backdrop-blur-sm">
             <div className="flex items-center gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#4fd1ff]/30 to-violet-500/30 text-3xl font-black text-[#4fd1ff]">
-                {initials}
+              {/* Avatar with upload overlay */}
+              <div className="relative shrink-0">
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="sr-only"
+                />
+                <div className="h-20 w-20 overflow-hidden rounded-2xl bg-gradient-to-br from-[#4fd1ff]/30 to-violet-500/30">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-3xl font-black text-[#4fd1ff]">
+                      {initials}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => avatarFileRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#04080f] bg-[#4fd1ff] text-[#030712] shadow-lg transition-transform hover:scale-110 disabled:opacity-60"
+                  title="Change photo"
+                >
+                  {uploadingAvatar ? <Spinner size="sm" /> : <FiCamera size={12} />}
+                </button>
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-2xl font-black text-white">{profile?.full_name ?? profile?.username ?? 'No name set'}</h2>
-                <p className="text-sm text-white">@{profile?.username}</p>
+                <p className="text-sm text-white/55">@{profile?.username}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={`rounded-full border px-3 py-0.5 text-xs font-semibold capitalize ${roleBadge.cls}`}>
                     {roleBadge.label}
@@ -173,14 +218,14 @@ export default function ProfilePage() {
               </div>
             </div>
             {profile?.bio && (
-              <p className="mt-4 text-sm leading-relaxed text-white border-t border-white/[0.07] pt-4">{profile.bio}</p>
+              <p className="mt-4 text-sm leading-relaxed text-white/70 border-t border-white/[0.07] pt-4">{profile.bio}</p>
             )}
           </div>
 
           {/* ── View mode ── */}
           {!editing && (
             <div className="rounded-2xl border border-white/20 bg-[#04080f]/90 p-6 backdrop-blur-sm">
-              <h3 className="mb-5 text-sm font-semibold uppercase tracking-widest text-white">Details</h3>
+              <h3 className="mb-5 text-sm font-semibold uppercase tracking-widest text-white/50">Details</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field icon={FiMail}    label="Email"           value={profile?.email} />
                 <Field icon={FiPhone}   label="Phone"           value={profile?.phone} />
@@ -200,7 +245,7 @@ export default function ProfilePage() {
               )}
               {!profile?.phone && !profile?.college && !profile?.bio && (
                 <div className="py-6 text-center">
-                  <p className="text-sm text-white">No details added yet.</p>
+                  <p className="text-sm text-white/55">No details added yet.</p>
                   <button onClick={startEdit} className="mt-2 text-sm font-semibold text-[#4fd1ff] hover:underline">
                     Complete your profile →
                   </button>
@@ -211,39 +256,38 @@ export default function ProfilePage() {
 
           {/* ── Edit mode ── */}
           {editing && form && (
-            <motion.form
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+            <form
               onSubmit={handleSave}
-              className="space-y-5 rounded-2xl border border-[#4fd1ff]/20 bg-[#04080f]/92 p-6 backdrop-blur-sm"
+              className="space-y-5 rounded-2xl p-6"
+              style={{ background: '#1a2744', border: '1px solid rgba(79,209,255,0.3)' }}
             >
-              <h3 className="text-sm font-semibold uppercase tracking-widest text-white">Edit Details</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-white/50">Edit Details</h3>
 
               {/* Basic */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Full Name</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Full Name</label>
                   <input value={form.fullName} onChange={set('fullName')} placeholder="Your full name" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Username</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Username</label>
                   <input value={form.username} onChange={set('username')} placeholder="username" className={inputCls} />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-white">Bio</label>
+                <label className="mb-1.5 block text-xs font-medium text-white/60">Bio</label>
                 <textarea value={form.bio} onChange={set('bio')} placeholder="Tell others about yourself…" rows={3} className={`${inputCls} resize-none`} />
               </div>
 
               {/* Contact */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Phone Number</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Phone Number</label>
                   <input value={form.phone} onChange={set('phone')} placeholder="+91 98765 43210" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Location</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Location</label>
                   <input value={form.location} onChange={set('location')} placeholder="City, State" className={inputCls} />
                 </div>
               </div>
@@ -251,19 +295,19 @@ export default function ProfilePage() {
               {/* College */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">College / University</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">College / University</label>
                   <input value={form.college} onChange={set('college')} placeholder="e.g. IIT Bombay" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">College Email ID</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">College Email ID</label>
                   <input type="email" value={form.collegeEmail} onChange={set('collegeEmail')} placeholder="you@college.edu" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Department / Branch</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Department / Branch</label>
                   <input value={form.department} onChange={set('department')} placeholder="e.g. Computer Science" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Year of Study</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Year of Study</label>
                   <select value={form.yearOfStudy} onChange={set('yearOfStudy')} className={`${inputCls} appearance-none`}>
                     <option value="">Select year</option>
                     {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
@@ -274,24 +318,24 @@ export default function ProfilePage() {
               {/* Online */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">Website</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">Website</label>
                   <input type="url" value={form.website} onChange={set('website')} placeholder="https://yoursite.com" className={inputCls} />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white">GitHub URL</label>
+                  <label className="mb-1.5 block text-xs font-medium text-white/60">GitHub URL</label>
                   <input type="url" value={form.githubUrl} onChange={set('githubUrl')} placeholder="https://github.com/you" className={inputCls} />
                 </div>
               </div>
 
               {/* Skills */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-white">Skills <span className="text-white">(press Enter or click Add)</span></label>
+                <label className="mb-1.5 block text-xs font-medium text-white/60">Skills <span className="text-white/40">(press Enter or click Add)</span></label>
                 <TagInput value={form.skills} onChange={setArr('skills')} placeholder="e.g. React, Python…" />
               </div>
 
               {/* Interests */}
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-white">Interests <span className="text-white">(press Enter or click Add)</span></label>
+                <label className="mb-1.5 block text-xs font-medium text-white/60">Interests <span className="text-white/40">(press Enter or click Add)</span></label>
                 <TagInput value={form.interests} onChange={setArr('interests')} placeholder="e.g. AI, Robotics, Design…" />
               </div>
 
@@ -308,10 +352,10 @@ export default function ProfilePage() {
                   <FiX size={14} /> Cancel
                 </button>
               </div>
-            </motion.form>
+            </form>
           )}
 
-        </motion.div>
+        </div>
       </div>
     </div>
   )

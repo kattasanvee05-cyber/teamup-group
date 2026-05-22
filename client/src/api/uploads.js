@@ -15,6 +15,7 @@ async function upload(endpoint, fieldName, file) {
 }
 
 export const uploadsApi = {
-  resume:    (file) => upload('/uploads/resume',     'resume', file),
-  itemImage: (file) => upload('/uploads/item-image', 'image',  file),
+  resume:    (file) => upload('/uploads/resume',     'resume',  file),
+  avatar:    (file) => upload('/uploads/avatar',     'avatar',  file),
+  itemImage: (file) => upload('/uploads/item-image', 'image',   file),
 }

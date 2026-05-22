@@ -21,7 +21,7 @@ export default function LoginPage() {
     try {
       await login(form.email, form.password)
       toast.success('Welcome back!')
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       toast.error(err.message ?? 'Login failed')
     } finally {
@@ -44,31 +44,31 @@ export default function LoginPage() {
           <div className="mb-8 text-center">
             <LogoFull className="mb-5" />
             <h1 className="text-2xl font-bold tracking-tight text-white">Welcome back</h1>
-            <p className="mt-1.5 text-sm text-white">Sign in to your account to continue</p>
+            <p className="mt-1.5 text-sm text-white/60">Sign in to your account to continue</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <FiMail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white" />
+              <FiMail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45" />
               <input
                 type="email"
                 placeholder="Email address"
                 required
                 value={form.email}
                 onChange={set('email')}
-                className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
+                className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/35 transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
               />
             </div>
 
             <div className="relative">
-              <FiLock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white" />
+              <FiLock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45" />
               <input
                 type="password"
                 placeholder="Password"
                 required
                 value={form.password}
                 onChange={set('password')}
-                className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
+                className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/35 transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
               />
             </div>
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-7 text-center text-sm text-white">
+          <p className="mt-7 text-center text-sm text-white/55">
             Don't have an account?{' '}
             <Link to="/register" className="font-semibold text-[#4fd1ff] hover:underline">Create one</Link>
           </p>

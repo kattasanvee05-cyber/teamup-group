@@ -1,5 +1,66 @@
 import { supabaseAdmin } from '../config/supabase.js';
 
+// POST /api/studies/books
+export async function createBook(req, res) {
+  const { title, author, subject, description, edition, year, totalCopies, price, coverColor, imageUrl } = req.body;
+  if (!title?.trim() || !author?.trim() || !subject?.trim() || !totalCopies) {
+    return res.status(400).json({ error: 'title, author, subject, and totalCopies are required' });
+  }
+  const copies = parseInt(totalCopies, 10);
+  if (isNaN(copies) || copies < 1) return res.status(400).json({ error: 'totalCopies must be at least 1' });
+
+  const { data, error } = await supabaseAdmin
+    .from('books')
+    .insert({
+      title: title.trim(),
+      author: author.trim(),
+      subject: subject.trim(),
+      description: description?.trim() || null,
+      edition: edition?.trim() || null,
+      year: year ? parseInt(year, 10) : null,
+      total_copies: copies,
+      available_copies: copies,
+      price: price ? parseFloat(price) : null,
+      cover_color: coverColor?.trim() || null,
+      image_url: imageUrl || null,
+      owner_id: req.profile.id,
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ book: data });
+}
+
+// POST /api/studies/equipment
+export async function createEquipment(req, res) {
+  const { name, category, description, condition, totalQuantity, price, imageUrl } = req.body;
+  if (!name?.trim() || !category?.trim() || !totalQuantity) {
+    return res.status(400).json({ error: 'name, category, and totalQuantity are required' });
+  }
+  const qty = parseInt(totalQuantity, 10);
+  if (isNaN(qty) || qty < 1) return res.status(400).json({ error: 'totalQuantity must be at least 1' });
+
+  const { data, error } = await supabaseAdmin
+    .from('equipment')
+    .insert({
+      name: name.trim(),
+      category: category.trim(),
+      description: description?.trim() || null,
+      condition: condition?.trim() || null,
+      total_quantity: qty,
+      available_quantity: qty,
+      price: price ? parseFloat(price) : null,
+      image_url: imageUrl || null,
+      owner_id: req.profile.id,
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ equipment: data });
+}
+
 // GET /api/studies/books
 export async function listBooks(req, res) {
   const { q, subject, available } = req.query;
@@ -146,31 +207,66 @@ export async function startBorrowChat(req, res) {
 
   const table = item_type === 'book' ? 'books' : 'equipment';
   const { data: item } = await supabaseAdmin.from(table).select('owner_id').eq('id', item_id).single();
-  if (!item?.owner_id) return res.status(400).json({ error: 'This item has no seller — contact admin to assign one.' });
-  if (item.owner_id === req.profile.id) return res.status(400).json({ error: 'You cannot chat with yourself about your own listing.' });
+  if (!item) return res.status(404).json({ error: 'Item not found.' });
 
-  const { data, error } = await supabaseAdmin
+  // If caller is the item owner, return all customer chats for this item
+  if (item.owner_id && item.owner_id === req.profile.id) {
+    const { data: chats } = await supabaseAdmin
+      .from('borrow_chats')
+      .select('id, user_id, item_id, item_type, created_at')
+      .eq('item_id', item_id)
+      .eq('item_type', item_type)
+      .order('created_at', { ascending: false });
+
+    const userIds = (chats ?? []).map(c => c.user_id);
+    const { data: profiles } = userIds.length
+      ? await supabaseAdmin.from('profiles').select('id, username, full_name').in('id', userIds)
+      : { data: [] };
+    const profileMap = Object.fromEntries((profiles ?? []).map(p => [p.id, p]));
+
+    return res.status(200).json({
+      isOwner: true,
+      chats: (chats ?? []).map(c => ({ ...c, customer: profileMap[c.user_id] ?? null })),
+    });
+  }
+
+  // Customer flow — upsert creates or reuses their chat thread
+  const { data: chatRow, error: chatErr } = await supabaseAdmin
     .from('borrow_chats')
     .upsert(
-      { user_id: req.profile.id, owner_id: item.owner_id, item_id, item_type },
+      { user_id: req.profile.id, item_id, item_type },
       { onConflict: 'user_id,item_id,item_type' }
     )
-    .select('id, user_id, owner_id, item_id, item_type, created_at, user:user_id(id, username, full_name), owner:owner_id(id, username, full_name)')
+    .select('id, user_id, item_id, item_type, created_at')
     .single();
 
-  if (error) return res.status(400).json({ error: error.message });
-  res.status(201).json({ chat: data });
+  if (chatErr) return res.status(400).json({ error: chatErr.message });
+
+  const { data: ownerProfile } = item.owner_id
+    ? await supabaseAdmin.from('profiles').select('id, username, full_name').eq('id', item.owner_id).single()
+    : { data: null };
+
+  res.status(200).json({
+    isOwner: false,
+    chat: { ...chatRow, owner: ownerProfile ?? null },
+  });
+}
+
+async function canAccessChat(chatId, profileId) {
+  const { data: chat } = await supabaseAdmin
+    .from('borrow_chats').select('user_id, item_id, item_type').eq('id', chatId).single();
+  if (!chat) return { allowed: false };
+  if (chat.user_id === profileId) return { allowed: true, chat };
+  const table = chat.item_type === 'book' ? 'books' : 'equipment';
+  const { data: item } = await supabaseAdmin.from(table).select('owner_id').eq('id', chat.item_id).single();
+  if (item?.owner_id === profileId) return { allowed: true, chat };
+  return { allowed: false };
 }
 
 // GET /api/studies/chat/:id/messages
 export async function getBorrowMessages(req, res) {
-  const { data: chat } = await supabaseAdmin
-    .from('borrow_chats').select('user_id, owner_id').eq('id', req.params.id).single();
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
-
-  if (chat.user_id !== req.profile.id && chat.owner_id !== req.profile.id) {
-    return res.status(403).json({ error: 'Not authorized' });
-  }
+  const { allowed } = await canAccessChat(req.params.id, req.profile.id);
+  if (!allowed) return res.status(403).json({ error: 'Not authorized' });
 
   let query = supabaseAdmin
     .from('borrow_messages')
@@ -190,13 +286,8 @@ export async function sendBorrowMessage(req, res) {
   const { message } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'message is required' });
 
-  const { data: chat } = await supabaseAdmin
-    .from('borrow_chats').select('user_id, owner_id').eq('id', req.params.id).single();
-  if (!chat) return res.status(404).json({ error: 'Chat not found' });
-
-  if (chat.user_id !== req.profile.id && chat.owner_id !== req.profile.id) {
-    return res.status(403).json({ error: 'Not authorized' });
-  }
+  const { allowed, chat } = await canAccessChat(req.params.id, req.profile.id);
+  if (!allowed) return res.status(403).json({ error: 'Not authorized' });
 
   const { data, error } = await supabaseAdmin
     .from('borrow_messages')
@@ -205,5 +296,52 @@ export async function sendBorrowMessage(req, res) {
     .single();
 
   if (error) return res.status(400).json({ error: error.message });
+
+  // Notify the other party
+  try {
+    const table2 = chat.item_type === 'book' ? 'books' : 'equipment';
+    const { data: itemRow } = await supabaseAdmin.from(table2).select('owner_id, title, name').eq('id', chat.item_id).single();
+    const recipientId = req.profile.id === chat.user_id ? itemRow?.owner_id : chat.user_id;
+    if (recipientId && recipientId !== req.profile.id) {
+      const senderName = req.profile.full_name ?? req.profile.username ?? 'Someone';
+      await supabaseAdmin.from('notifications').insert({
+        user_id: recipientId,
+        type: 'message',
+        title: `New message from ${senderName}`,
+        message: `About: "${itemRow?.title ?? itemRow?.name ?? 'an item'}"`,
+        is_read: false,
+      });
+    }
+  } catch {}
+
   res.status(201).json({ message: data });
+}
+
+// GET /api/studies/my-items  — items listed by the current user
+export async function getMyItems(req, res) {
+  const uid = req.profile.id;
+
+  const [{ data: books }, { data: equipment }] = await Promise.all([
+    supabaseAdmin.from('books').select('id, title, author, subject, total_copies, available_copies, cover_color, price').eq('owner_id', uid),
+    supabaseAdmin.from('equipment').select('id, name, category, total_quantity, available_quantity, condition, price').eq('owner_id', uid),
+  ]);
+
+  const bookIds  = (books  ?? []).map(b => b.id);
+  const equipIds = (equipment ?? []).map(e => e.id);
+
+  const [{ data: bookChats }, { data: equipChats }] = await Promise.all([
+    bookIds.length
+      ? supabaseAdmin.from('borrow_chats').select('item_id').eq('item_type', 'book').in('item_id', bookIds)
+      : { data: [] },
+    equipIds.length
+      ? supabaseAdmin.from('borrow_chats').select('item_id').eq('item_type', 'equipment').in('item_id', equipIds)
+      : { data: [] },
+  ]);
+
+  const count = (arr, id) => (arr ?? []).filter(c => c.item_id === id).length;
+
+  res.json({
+    books:     (books     ?? []).map(b => ({ ...b, chat_count: count(bookChats, b.id) })),
+    equipment: (equipment ?? []).map(e => ({ ...e, chat_count: count(equipChats, e.id) })),
+  });
 }

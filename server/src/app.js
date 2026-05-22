@@ -7,7 +7,8 @@ import authRoutes          from './routes/auth.routes.js';
 import opportunitiesRoutes from './routes/opportunities.routes.js';
 import internshipsRoutes   from './routes/internships.routes.js';
 import applicationsRoutes  from './routes/applications.routes.js';
-import teamsRoutes         from './routes/teams.routes.js';
+import projectsRoutes      from './routes/projects.routes.js';
+import clubsRoutes         from './routes/clubs.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import studiesRoutes       from './routes/studies.routes.js';
 import exchangeRoutes      from './routes/exchange.routes.js';
@@ -24,10 +25,19 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
 
-// Global rate limit
+// Auth-specific rate limit (stricter)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+
+// Global rate limit — high enough to accommodate polling
 app.use(rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 200,
+  windowMs: 15 * 60 * 1000,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
@@ -40,11 +50,12 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Routes
-app.use('/api/auth',          authRoutes);
+app.use('/api/auth',          authLimiter, authRoutes);
 app.use('/api/opportunities', opportunitiesRoutes);
 app.use('/api/internships',   internshipsRoutes);
 app.use('/api/applications',  applicationsRoutes);
-app.use('/api/teams',         teamsRoutes);
+app.use('/api/projects',      projectsRoutes);
+app.use('/api/clubs',         clubsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/studies',      studiesRoutes);
 app.use('/api/exchange',     exchangeRoutes);

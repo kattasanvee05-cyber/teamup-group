@@ -9,10 +9,12 @@ import {
   listTargetApplications,
   updateApplicationStatus,
   withdrawApplication,
+  createApplication,
 } from '../controllers/applications.controller.js';
 
 const router = Router();
 
+router.post  ('/',                          authenticate,              createApplication);
 router.get   ('/',                          authenticate,              listMyApplications);
 router.get   ('/:id',                       authenticate,              getApplication);
 router.get   ('/target/:targetId',          authenticate, teacherUp,   listTargetApplications);

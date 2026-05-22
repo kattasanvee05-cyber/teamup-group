@@ -26,7 +26,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await authApi.signup(form)
-      toast.success('Account created! Check your email and click the confirmation link, then log in.')
+      toast.success('Account created! You can now log in.')
       navigate('/login')
     } catch (err) {
       toast.error(err.message ?? 'Signup failed')
@@ -50,20 +50,20 @@ export default function RegisterPage() {
           <div className="mb-8 text-center">
             <LogoFull className="mb-5" />
             <h1 className="text-2xl font-bold tracking-tight text-white">Create your account</h1>
-            <p className="mt-1.5 text-sm text-white">Join the community and start collaborating</p>
+            <p className="mt-1.5 text-sm text-white/60">Join the community and start collaborating</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {FIELDS.map(({ key, placeholder, type, icon: Icon }) => (
               <div key={key} className="relative">
-                <Icon size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white" />
+                <Icon size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45" />
                 <input
                   type={type}
                   placeholder={placeholder}
                   required
                   value={form[key]}
                   onChange={set(key)}
-                  className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
+                  className="w-full rounded-xl border border-white/15 bg-white/[0.07] py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-white/35 transition-colors focus:border-[#4fd1ff]/50 focus:bg-white/[0.10] focus:outline-none"
                 />
               </div>
             ))}
@@ -89,7 +89,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-7 text-center text-sm text-white">
+          <p className="mt-7 text-center text-sm text-white/55">
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-[#4fd1ff] hover:underline">Sign in</Link>
           </p>

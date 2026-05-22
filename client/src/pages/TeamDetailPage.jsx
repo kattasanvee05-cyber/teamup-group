@@ -120,7 +120,7 @@ export default function TeamDetailPage() {
   const isOwner = myRole === 'owner'
 
   return (
-    <div className="min-h-screen pt-[4.5rem] pb-20 px-4">
+    <div className="min-h-screen pb-20 px-4 sm:px-8" style={{ paddingTop: 'calc(4.5rem + 2rem)' }}>
       <div className="mx-auto max-w-6xl">
 
         {/* Back */}
