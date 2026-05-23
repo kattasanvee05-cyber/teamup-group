@@ -4,10 +4,9 @@ export const signupSchema = z.object({
   email:     z.string().email('Invalid email'),
   password:  z.string().min(8, 'Minimum 8 characters').max(72),
   fullName:  z.string().min(2).max(80).trim(),
-  username:  z.string()
-               .min(3).max(20)
-               .regex(/^[a-z0-9_]+$/, 'Username: a-z, 0-9, _ only')
-               .toLowerCase(),
+  username:  z.string().min(3).max(30).trim()
+               .transform(s => s.toLowerCase())
+               .pipe(z.string().regex(/^[a-z0-9._-]+$/, 'Username can only contain letters, numbers, dots, hyphens, and underscores')),
   role:      z.enum(['student', 'teacher', 'admin']).default('student'),
 });
 
@@ -26,7 +25,7 @@ export const resetPasswordSchema = z.object({
 
 export const updateProfileSchema = z.object({
   fullName:      z.string().min(2).max(80).trim().optional(),
-  username:      z.string().min(3).max(20).regex(/^[a-z0-9_]+$/).toLowerCase().optional(),
+  username:      z.string().min(3).max(30).trim().transform(s => s.toLowerCase()).pipe(z.string().regex(/^[a-z0-9._-]+$/)).optional(),
   bio:           z.string().max(500).optional(),
   phone:         z.string().max(20).optional().or(z.literal('')),
   college:       z.string().max(200).optional().or(z.literal('')),

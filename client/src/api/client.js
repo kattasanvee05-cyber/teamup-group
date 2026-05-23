@@ -43,7 +43,10 @@ async function request(path, options = {}, retry = false) {
 
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    throw Object.assign(new Error(data.error ?? 'Request failed'), { status: res.status, data })
+    const message = data.errors?.length
+      ? data.errors.map(e => e.message).join(', ')
+      : (data.error ?? 'Request failed')
+    throw Object.assign(new Error(message), { status: res.status, data })
   }
   return data
 }
