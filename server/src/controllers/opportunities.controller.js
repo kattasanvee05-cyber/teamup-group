@@ -44,9 +44,14 @@ export async function getOpportunity(req, res) {
 
 // POST /api/opportunities
 export async function createOpportunity(req, res) {
+  const { companyName, ...rest } = req.body;
   const { data, error } = await supabaseAdmin
     .from('opportunities')
-    .insert({ ...req.body, created_by: req.profile.id })
+    .insert({
+      ...rest,
+      ...(companyName !== undefined && { company_name: companyName }),
+      created_by: req.profile.id,
+    })
     .select()
     .single();
 
@@ -64,9 +69,13 @@ export async function updateOpportunity(req, res) {
     return res.status(403).json({ error: 'Not authorized to edit this opportunity' });
   }
 
+  const { companyName, ...rest } = req.body;
+  const updateData = { ...rest, updated_at: new Date().toISOString() };
+  if (companyName !== undefined) updateData.company_name = companyName;
+
   const { data, error } = await supabaseAdmin
     .from('opportunities')
-    .update({ ...req.body, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq('id', req.params.id)
     .select()
     .single();

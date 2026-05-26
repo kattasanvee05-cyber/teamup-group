@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { env } from './config/env.js';
 import authRoutes          from './routes/auth.routes.js';
 import opportunitiesRoutes from './routes/opportunities.routes.js';
@@ -14,6 +17,9 @@ import studiesRoutes       from './routes/studies.routes.js';
 import exchangeRoutes      from './routes/exchange.routes.js';
 import uploadsRoutes       from './routes/uploads.routes.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(__dirname, '../../client/dist');
 
 const app = express();
 
@@ -61,8 +67,17 @@ app.use('/api/studies',      studiesRoutes);
 app.use('/api/exchange',     exchangeRoutes);
 app.use('/api/uploads',      uploadsRoutes);
 
-// 404 + Error handlers
-app.use(notFound);
+// Serve React client build (SPA catch-all — must come after all API routes)
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+  // 404 only for API-only mode (no client build present)
+  app.use(notFound);
+}
+
 app.use(errorHandler);
 
 export default app;

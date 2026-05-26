@@ -50,11 +50,23 @@ export async function getInternship(req, res) {
   res.json({ internship: data });
 }
 
+function toSnake(body) {
+  const { companyName, durationMonths, stipendMonthly, ppoAvailable, activelyHiring, ...rest } = body;
+  return {
+    ...rest,
+    ...(companyName      !== undefined && { company_name:     companyName      }),
+    ...(durationMonths   !== undefined && { duration_months:  durationMonths   }),
+    ...(stipendMonthly   !== undefined && { stipend_monthly:  stipendMonthly   }),
+    ...(ppoAvailable     !== undefined && { ppo_available:    ppoAvailable     }),
+    ...(activelyHiring   !== undefined && { actively_hiring:  activelyHiring   }),
+  };
+}
+
 // POST /api/internships  (teacher/admin)
 export async function createInternship(req, res) {
   const { data, error } = await supabaseAdmin
     .from('internships')
-    .insert({ ...req.body, created_by: req.profile.id })
+    .insert({ ...toSnake(req.body), created_by: req.profile.id })
     .select()
     .single();
 
@@ -73,7 +85,7 @@ export async function updateInternship(req, res) {
 
   const { data, error } = await supabaseAdmin
     .from('internships')
-    .update({ ...req.body, updated_at: new Date().toISOString() })
+    .update({ ...toSnake(req.body), updated_at: new Date().toISOString() })
     .eq('id', req.params.id)
     .select()
     .single();

@@ -75,6 +75,7 @@ function TableMissing({ name }) {
 
 // ── Books tab ─────────────────────────────────────────────────────────────
 function BooksTab() {
+  const { profile } = useAuth()
   const [items, setItems]         = useState([])
   const [loading, setLoading]     = useState(true)
   const [missing, setMissing]     = useState(false)
@@ -138,6 +139,7 @@ function BooksTab() {
           {filtered.map((book, i) => {
             const subjCls = SUBJECT_COLORS[book.subject] ?? SUBJECT_COLORS.default
             const avail   = book.available_copies > 0
+            const isOwner = book.owner?.id === profile?.id
             return (
               <motion.div key={book.id} {...fade(i)}
                 className="group flex flex-col rounded-2xl border border-white/20 bg-[#04080f]/90 backdrop-blur-sm transition-all duration-300 hover:border-[#4fd1ff]/25 hover:shadow-lg hover:shadow-cyan-500/10 overflow-hidden"
@@ -186,17 +188,19 @@ function BooksTab() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={() => setChatTarget(book)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:border-[#4fd1ff]/40 hover:text-[#4fd1ff]"
+                      className={`flex items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:border-[#4fd1ff]/40 hover:text-[#4fd1ff] ${isOwner ? 'w-full' : 'flex-1'}`}
                     >
                       <FiMessageSquare size={13} /> Chat
                     </button>
-                    <button
-                      onClick={() => handleBorrow(book)}
-                      disabled={!avail || borrowing === book.id}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#4fd1ff]/10 py-2.5 text-sm font-medium text-[#4fd1ff] transition-all duration-200 hover:bg-[#4fd1ff]/20 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {borrowing === book.id ? <Spinner size="sm" /> : <><FiBook size={13} /> Borrow</>}
-                    </button>
+                    {isOwner && (
+                      <button
+                        onClick={() => handleBorrow(book)}
+                        disabled={!avail || borrowing === book.id}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#4fd1ff]/10 py-2.5 text-sm font-medium text-[#4fd1ff] transition-all duration-200 hover:bg-[#4fd1ff]/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {borrowing === book.id ? <Spinner size="sm" /> : <><FiBook size={13} /> Borrow</>}
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -214,6 +218,7 @@ function BooksTab() {
 
 // ── Equipment tab ─────────────────────────────────────────────────────────
 function EquipmentTab() {
+  const { profile } = useAuth()
   const [items, setItems]         = useState([])
   const [loading, setLoading]     = useState(true)
   const [missing, setMissing]     = useState(false)
@@ -282,6 +287,7 @@ function EquipmentTab() {
                 {filtered.filter(e => e.category === cat).map((eq, i) => {
                   const avail   = eq.available_quantity > 0
                   const condCls = COND_COLORS[eq.condition] ?? COND_COLORS.good
+                  const isOwner = eq.owner?.id === profile?.id
                   return (
                     <motion.div key={eq.id} {...fade(i)}
                       className="group flex flex-col rounded-2xl border border-white/20 bg-[#04080f]/90 backdrop-blur-sm transition-all duration-300 hover:border-violet-400/25 hover:shadow-lg hover:shadow-violet-500/10 overflow-hidden"
@@ -321,17 +327,19 @@ function EquipmentTab() {
                         <div className="mt-4 flex gap-2">
                           <button
                             onClick={() => setChatTarget(eq)}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:border-violet-400/40 hover:text-violet-400"
+                            className={`flex items-center justify-center gap-1.5 rounded-xl border border-white/20 py-2.5 text-sm font-medium text-white transition-all duration-200 hover:border-violet-400/40 hover:text-violet-400 ${isOwner ? 'w-full' : 'flex-1'}`}
                           >
                             <FiMessageSquare size={13} /> Chat
                           </button>
-                          <button
-                            onClick={() => handleBorrow(eq)}
-                            disabled={!avail || borrowing === eq.id}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-500/10 py-2.5 text-sm font-medium text-violet-400 transition-all duration-200 hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {borrowing === eq.id ? <Spinner size="sm" /> : <><FiTool size={13} /> Borrow</>}
-                          </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => handleBorrow(eq)}
+                              disabled={!avail || borrowing === eq.id}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-violet-500/10 py-2.5 text-sm font-medium text-violet-400 transition-all duration-200 hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {borrowing === eq.id ? <Spinner size="sm" /> : <><FiTool size={13} /> Borrow</>}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </motion.div>
